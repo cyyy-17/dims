@@ -347,11 +347,15 @@ class DataStore {
 
     try {
       this.setSyncStatus('syncing');
+      const controller = new AbortController();
+      const tId = setTimeout(() => controller.abort(), 6000);
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, table, payload }),
+        signal: controller.signal,
       });
+      clearTimeout(tId);
 
       if (!res.ok) {
         this.enqueueMutation(action, table, payload);
@@ -369,6 +373,10 @@ class DataStore {
     } catch {
       this.enqueueMutation(action, table, payload);
       return false;
+    } finally {
+      if (this.syncStatus === 'syncing') {
+        this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
+      }
     }
   }
 
@@ -378,11 +386,15 @@ class DataStore {
     if (queue.length === 0) return;
 
     try {
+      const controller = new AbortController();
+      const tId = setTimeout(() => controller.abort(), 6000);
       const res = await fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mutations: queue }),
+        signal: controller.signal,
       });
+      clearTimeout(tId);
 
       if (res.ok) {
         const data = await res.json();
@@ -403,14 +415,22 @@ class DataStore {
     const remainingQueue = [];
     for (const item of queue) {
       try {
+        let resErr: any = null;
         if (item.action === 'INSERT') {
-          await supabase.from(item.table).insert(item.payload);
+          const r = await supabase.from(item.table).insert(item.payload);
+          resErr = r.error;
         } else if (item.action === 'UPSERT') {
-          await supabase.from(item.table).upsert(item.payload);
+          const r = await supabase.from(item.table).upsert(item.payload);
+          resErr = r.error;
         } else if (item.action === 'UPDATE') {
-          await supabase.from(item.table).update(item.payload.data).eq('id', item.payload.id);
+          const r = await supabase.from(item.table).update(item.payload.data).eq('id', item.payload.id);
+          resErr = r.error;
         } else if (item.action === 'DELETE') {
-          await supabase.from(item.table).delete().eq('id', item.payload.id);
+          const r = await supabase.from(item.table).delete().eq('id', item.payload.id);
+          resErr = r.error;
+        }
+        if (resErr) {
+          remainingQueue.push(item);
         }
       } catch {
         remainingQueue.push(item);
@@ -594,26 +614,54 @@ class DataStore {
     this.isSyncing = true;
     this.setSyncStatus('syncing');
 
+    // Auto-recovery watchdog: ensure syncing state never hangs for more than 8 seconds
+    const watchdog = setTimeout(() => {
+      if (this.isSyncing) {
+        this.isSyncing = false;
+        this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
+        this.notify();
+      }
+    }, 8000);
+
     try {
-      // 1. Try server-side authenticated GET /api/sync
-      const res = await fetch('/api/sync');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          this.applySyncData(json.data);
-          await this.processPendingSyncQueue();
-          this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
-          this.notify();
-          return;
+      // 1. Try server-side authenticated GET /api/sync with 5s timeout
+      try {
+        const controller = new AbortController();
+        const tId = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch('/api/sync', { signal: controller.signal });
+        clearTimeout(tId);
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            this.applySyncData(json.data);
+            await this.processPendingSyncQueue();
+            return;
+          }
         }
+      } catch {
+        // Fallback to direct client queries below
       }
 
       // 2. Direct Supabase client fallback
       const supabase = getSupabaseClient();
-      if (!supabase) {
-        this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
-        return;
-      }
+      if (!supabase) return;
+
+      const fetchPromise = Promise.all([
+        supabase.from('rooms').select('*'),
+        supabase.from('bed_slots').select('*'),
+        supabase.from('dormers').select('*'),
+        supabase.from('room_assignments').select('*').eq('is_current', true),
+        supabase.from('categories').select('*'),
+        supabase.from('items').select('*'),
+        supabase.from('visitor_logs').select('*').order('created_at', { ascending: false }),
+        supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+        supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(500),
+      ]);
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase client sync timeout')), 5000)
+      );
 
       const [
         { data: rooms },
@@ -625,17 +673,7 @@ class DataStore {
         { data: visitorLogs },
         { data: announcements },
         { data: activityLogs },
-      ] = await Promise.all([
-        supabase.from('rooms').select('*'),
-        supabase.from('bed_slots').select('*'),
-        supabase.from('dormers').select('*'),
-        supabase.from('room_assignments').select('*').eq('is_current', true),
-        supabase.from('categories').select('*'),
-        supabase.from('items').select('*'),
-        supabase.from('visitor_logs').select('*').order('created_at', { ascending: false }),
-        supabase.from('announcements').select('*').order('created_at', { ascending: false }),
-        supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(500),
-      ]);
+      ] = await Promise.race([fetchPromise, timeoutPromise]);
 
       this.applySyncData({
         rooms: rooms || undefined,
@@ -650,13 +688,13 @@ class DataStore {
       });
 
       await this.processPendingSyncQueue();
-      this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
-      this.notify();
     } catch (err) {
       console.warn('Supabase sync notice:', err);
-      this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
     } finally {
+      clearTimeout(watchdog);
       this.isSyncing = false;
+      this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
+      this.notify();
     }
   }
 
