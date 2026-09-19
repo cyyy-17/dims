@@ -242,67 +242,86 @@ CREATE POLICY "Staff read user profiles"
 CREATE POLICY "Staff update own user profiles"
   ON public.user_profiles FOR ALL TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "Staff full access rooms"
-  ON public.rooms FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read rooms"
-  ON public.rooms FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read rooms" ON public.rooms
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate rooms" ON public.rooms
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access bed slots"
-  ON public.bed_slots FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read bed slots"
-  ON public.bed_slots FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read bed slots" ON public.bed_slots
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate bed slots" ON public.bed_slots
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access dormers"
-  ON public.dormers FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read dormers"
-  ON public.dormers FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read dormers" ON public.dormers
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate dormers" ON public.dormers
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access assignments"
-  ON public.room_assignments FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read assignments"
-  ON public.room_assignments FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read assignments" ON public.room_assignments
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate assignments" ON public.room_assignments
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access visitor logs"
-  ON public.visitor_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read visitor logs"
-  ON public.visitor_logs FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read visitor logs" ON public.visitor_logs
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate visitor logs" ON public.visitor_logs
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access inventory items"
-  ON public.items FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read inventory items"
-  ON public.items FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read items" ON public.items
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate items" ON public.items
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access categories"
-  ON public.categories FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read categories"
-  ON public.categories FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read categories" ON public.categories
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate categories" ON public.categories
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access stock transactions"
-  ON public.stock_transactions FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read stock transactions"
-  ON public.stock_transactions FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read stock transactions" ON public.stock_transactions
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate stock transactions" ON public.stock_transactions
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access room inventory"
-  ON public.room_inventory FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read room inventory"
-  ON public.room_inventory FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read room inventory" ON public.room_inventory
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate room inventory" ON public.room_inventory
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access announcements"
-  ON public.announcements FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read announcements"
-  ON public.announcements FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read announcements" ON public.announcements
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate announcements" ON public.announcements
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
-CREATE POLICY "Staff full access announcement recipients"
-  ON public.announcement_recipients FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Anon read announcement recipients"
-  ON public.announcement_recipients FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read announcement recipients" ON public.announcement_recipients
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff mutate announcement recipients" ON public.announcement_recipients
+  FOR ALL TO authenticated
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
--- Immutable audit log: Insert allowed for authenticated and anon client, read allowed, update and delete forbidden
-CREATE POLICY "Audit logs insert"
-  ON public.activity_logs FOR INSERT TO authenticated, anon WITH CHECK (true);
-
-CREATE POLICY "Audit logs read"
-  ON public.activity_logs FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Anon audit logs read"
-  ON public.activity_logs FOR SELECT TO anon USING (true);
+CREATE POLICY "Public read activity logs" ON public.activity_logs
+  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff insert activity logs" ON public.activity_logs
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.role() = 'authenticated');
 

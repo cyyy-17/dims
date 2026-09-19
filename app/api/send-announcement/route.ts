@@ -28,7 +28,7 @@ const rateLimitMap = new Map<string, number[]>();
 export async function POST(request: NextRequest) {
   // 1. Session verification
   const sessionCookie = request.cookies.get('dims_staff_session');
-  if (!sessionCookie || sessionCookie.value !== '1') {
+  if (!sessionCookie?.value || sessionCookie.value.length < 64) {
     return NextResponse.json(
       {
         success: false,
