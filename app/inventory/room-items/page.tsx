@@ -109,7 +109,7 @@ export default function RoomItemsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by asset name, code, or room number..."
-            className="input-minimal !pl-10"
+            className="input-minimal pl-10!"
           />
         </div>
 

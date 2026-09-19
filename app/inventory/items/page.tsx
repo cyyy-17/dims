@@ -181,7 +181,7 @@ export default function ItemsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by item name, asset code, or location..."
-              className="input-minimal !pl-10"
+              className="input-minimal pl-10!"
             />
           </div>
 

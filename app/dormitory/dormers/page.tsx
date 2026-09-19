@@ -217,7 +217,7 @@ export default function DormersPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, student ID, employee ID, course, or email..."
-                className="input-minimal !pl-10"
+                className="input-minimal pl-10!"
               />
             </div>
           </div>

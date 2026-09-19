@@ -116,7 +116,7 @@ export default function StockPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by item, reference no, room, or supplier..."
-            className="input-minimal !pl-10"
+            className="input-minimal pl-10!"
           />
         </div>
 

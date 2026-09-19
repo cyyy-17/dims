@@ -141,7 +141,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="aseanresidences@firstasia.edu.ph"
-                  className="input-minimal !pl-10 !pr-3 transition-all"
+                  className="input-minimal pl-10! pr-3! transition-all"
                 />
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="input-minimal !pl-10 !pr-10 transition-all"
+                  className="input-minimal pl-10! pr-10! transition-all"
                 />
                 <button
                   type="button"

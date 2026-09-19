@@ -109,7 +109,7 @@ export default function VisitorLogPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by visitor name, purpose, or resident visited..."
-            className="input-minimal !pl-10"
+            className="input-minimal pl-10!"
           />
         </div>
 
