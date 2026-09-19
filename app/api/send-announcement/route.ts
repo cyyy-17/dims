@@ -11,7 +11,6 @@ interface SendPayload {
   recipients: Recipient[];
   senderEmail?: string;
   senderName?: string;
-  apiKey?: string;
 }
 
 function escapeHtml(str: string): string {
@@ -23,7 +22,45 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+// In-memory rate limiting map (IP/session -> timestamps)
+const rateLimitMap = new Map<string, number[]>();
+
 export async function POST(request: NextRequest) {
+  // 1. Session verification
+  const sessionCookie = request.cookies.get('dims_staff_session');
+  if (!sessionCookie || sessionCookie.value !== '1') {
+    return NextResponse.json(
+      {
+        success: false,
+        isSimulated: false,
+        sentCount: 0,
+        failedCount: 0,
+        details: 'Unauthorized: Valid ASR staff session cookie required.',
+      },
+      { status: 401 }
+    );
+  }
+
+  // 2. Rate limiting check (max 10 sends per minute)
+  const clientIdentifier = request.headers.get('x-forwarded-for') || 'staff-session';
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(clientIdentifier) || [];
+  const recentTimestamps = timestamps.filter((t) => now - t < 60000);
+  if (recentTimestamps.length >= 10) {
+    return NextResponse.json(
+      {
+        success: false,
+        isSimulated: false,
+        sentCount: 0,
+        failedCount: 0,
+        details: 'Rate limit exceeded: Please wait before sending more announcements.',
+      },
+      { status: 429 }
+    );
+  }
+  recentTimestamps.push(now);
+  rateLimitMap.set(clientIdentifier, recentTimestamps);
+
   try {
     const payload: SendPayload = await request.json();
     const {
@@ -32,7 +69,6 @@ export async function POST(request: NextRequest) {
       recipients,
       senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.NEXT_PUBLIC_BREVO_SENDER_EMAIL || 'aseanresidences@firstasia.edu.ph',
       senderName = process.env.BREVO_SENDER_NAME || process.env.NEXT_PUBLIC_BREVO_SENDER_NAME || 'ASEAN Student Residences',
-      apiKey,
     } = payload;
 
     if (!title || !body || !recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -48,9 +84,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prioritize server-only environment variable, then optional user key from settings
+    // Strictly read server environment variable (never client-supplied)
     const activeApiKey =
-      apiKey?.trim() ||
       process.env.BREVO_API_KEY ||
       process.env.NEXT_PUBLIC_BREVO_API_KEY ||
       '';

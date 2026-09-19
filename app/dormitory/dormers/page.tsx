@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { DormerModal } from '@/components/dormitory/DormerModal';
 import { CsvImportModal } from '@/components/dormitory/CsvImportModal';
 import { CheckInModal } from '@/components/dormitory/CheckInModal';
+import { TransferModal } from '@/components/dormitory/TransferModal';
+import { DormerProfileDrawer } from '@/components/dormitory/DormerProfileDrawer';
 import { exportToCsv } from '@/lib/csv';
 import {
   Users,
@@ -25,6 +27,7 @@ import {
   Trash2,
   Phone,
   Mail,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
@@ -36,11 +39,15 @@ export default function DormersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Modals
+  // Modals & Drawers
   const [isDormerModalOpen, setIsDormerModalOpen] = useState(false);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerDormer, setDrawerDormer] = useState<Dormer | null>(null);
   const [selectedDormer, setSelectedDormer] = useState<Dormer | null>(null);
+  const [dormerToTransfer, setDormerToTransfer] = useState<Dormer | null>(null);
   const [dormerToCheckout, setDormerToCheckout] = useState<Dormer | null>(null);
   const [dormerToDelete, setDormerToDelete] = useState<Dormer | null>(null);
 
@@ -267,11 +274,18 @@ export default function DormersPage() {
                 const isAssigned = !!dormer.currentAssignment?.roomNumber;
 
                 return (
-                  <tr key={dormer.id} className="hover:bg-[#F8F8F6] transition-colors">
+                  <tr
+                    key={dormer.id}
+                    onClick={() => {
+                      setDrawerDormer(dormer);
+                      setIsDrawerOpen(true);
+                    }}
+                    className="hover:bg-[#F8F8F6] transition-colors cursor-pointer group"
+                  >
                     {/* Name & Contact */}
                     <td className="py-3 px-4">
                       <div>
-                        <p className="font-bold text-[#141414] text-sm">
+                        <p className="font-bold text-[#141414] text-sm group-hover:text-[#4F46E5] transition-colors">
                           {dormer.firstName} {dormer.lastName}
                         </p>
                         <div className="flex items-center gap-3 text-[11px] text-[#8C8C8A] mt-0.5">
@@ -350,7 +364,8 @@ export default function DormersPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedDormer(dormer);
                             setIsCheckInModalOpen(true);
                           }}
@@ -377,22 +392,42 @@ export default function DormersPage() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {isAssigned && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            title="Check out from room"
-                            onClick={() => handleCheckout(dormer)}
-                            className="p-1.5 h-8 text-[#D97706] hover:bg-[#FFFBEB]"
-                          >
-                            <LogOut className="w-3.5 h-3.5" />
-                          </Button>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Transfer Bed"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDormerToTransfer(dormer);
+                                setIsTransferModalOpen(true);
+                              }}
+                              className="p-1.5 h-8 text-[#4F46E5] hover:bg-[#EEF2FF]"
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Check out from room"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCheckout(dormer);
+                              }}
+                              className="p-1.5 h-8 text-[#D97706] hover:bg-[#FFFBEB]"
+                            >
+                              <LogOut className="w-3.5 h-3.5" />
+                            </Button>
+                          </>
                         )}
 
                         <Button
                           size="sm"
                           variant="ghost"
                           title="Edit Profile"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedDormer(dormer);
                             setIsDormerModalOpen(true);
                           }}
@@ -405,7 +440,10 @@ export default function DormersPage() {
                           size="sm"
                           variant="ghost"
                           title="Delete Resident"
-                          onClick={() => handleDelete(dormer)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(dormer);
+                          }}
                           className="p-1.5 h-8 text-[#DC2626] hover:bg-[#FEF2F2]"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -428,7 +466,7 @@ export default function DormersPage() {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals & Drawers */}
       <DormerModal
         isOpen={isDormerModalOpen}
         onClose={() => setIsDormerModalOpen(false)}
@@ -442,6 +480,35 @@ export default function DormersPage() {
         isOpen={isCheckInModalOpen}
         onClose={() => setIsCheckInModalOpen(false)}
         dormer={selectedDormer}
+      />
+      <TransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setDormerToTransfer(null);
+        }}
+        dormer={dormerToTransfer}
+      />
+      <DormerProfileDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => {
+          setIsDrawerOpen(false);
+          setDrawerDormer(null);
+        }}
+        dormer={drawerDormer}
+        onEdit={(d) => {
+          setSelectedDormer(d);
+          setIsDormerModalOpen(true);
+        }}
+        onCheckIn={(d) => {
+          setSelectedDormer(d);
+          setIsCheckInModalOpen(true);
+        }}
+        onTransfer={(d) => {
+          setDormerToTransfer(d);
+          setIsTransferModalOpen(true);
+        }}
+        onCheckout={(d) => handleCheckout(d)}
       />
       <ConfirmDialog
         isOpen={!!dormerToCheckout}

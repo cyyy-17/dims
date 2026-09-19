@@ -12,6 +12,9 @@ import {
   PackagePlus,
   CalendarCheck,
   CheckCircle2,
+  RefreshCw,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -34,6 +37,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 }) => {
   const router = useRouter();
   const [metrics, setMetrics] = useState(store.getDashboardMetrics());
+  const [syncStatus, setSyncStatus] = useState(store.getSyncStatus());
+  const [pendingCount, setPendingCount] = useState(store.getPendingQueueCount());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +66,8 @@ export const Topbar: React.FC<TopbarProps> = ({
   useEffect(() => {
     const unsub = store.subscribe(() => {
       setMetrics(store.getDashboardMetrics());
+      setSyncStatus(store.getSyncStatus());
+      setPendingCount(store.getPendingQueueCount());
     });
     return unsub;
   }, []);
@@ -257,7 +264,54 @@ export const Topbar: React.FC<TopbarProps> = ({
       </div>
 
       {/* Right: Quick Action & Alert Bell */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Cloud Sync Status Indicator */}
+        <button
+          type="button"
+          aria-label="Cloud Sync Status"
+          title={
+            syncStatus === 'synced'
+              ? 'Data synchronized with Supabase cloud. Click to pull latest changes.'
+              : syncStatus === 'syncing'
+              ? 'Synchronizing with cloud...'
+              : syncStatus === 'offline'
+              ? 'You are currently offline. Changes are stored locally and will sync when reconnected.'
+              : `${pendingCount} offline change(s) queued. Click to retry sync.`
+          }
+          onClick={() => store.syncFromSupabase()}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+            syncStatus === 'synced'
+              ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#166534] hover:bg-[#DCFCE7]'
+              : syncStatus === 'syncing'
+              ? 'bg-[#EEF2FF] border-[#C7D2FE] text-[#4338CA]'
+              : syncStatus === 'offline'
+              ? 'bg-[#F4F4F5] border-[#E4E4E7] text-[#71717A]'
+              : 'bg-[#FFFBEB] border-[#FDE68A] text-[#92400E] hover:bg-[#FEF3C7]'
+          }`}
+        >
+          {syncStatus === 'syncing' ? (
+            <RefreshCw className="w-3 h-3 animate-spin text-[#4F46E5]" />
+          ) : syncStatus === 'offline' ? (
+            <CloudOff className="w-3 h-3 text-[#71717A]" />
+          ) : syncStatus === 'pending' ? (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+          ) : (
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#16A34A]"></span>
+            </span>
+          )}
+
+          <span className="hidden sm:inline">
+            {syncStatus === 'synced' && 'Cloud Synced'}
+            {syncStatus === 'syncing' && 'Syncing...'}
+            {syncStatus === 'offline' && 'Offline'}
+            {syncStatus === 'pending' && `${pendingCount} Queued`}
+          </span>
+        </button>
+
         {/* Quick Action Trigger Button */}
         <div ref={quickMenuRef} className="relative">
           <Button

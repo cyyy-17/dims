@@ -18,6 +18,7 @@ import {
 import { sendBrevoAnnouncement } from './brevo';
 import { getSupabaseClient } from './supabase';
 import { toast } from '@/components/ui/Toast';
+import { generateUUID, isUUID } from './utils';
 
 const STORAGE_KEY_PREFIX = 'dims_asr_';
 
@@ -865,6 +866,23 @@ class DataStore {
 
   // --- SUPABASE CLOUD DATA LAYER & OFFLINE QUEUE ---
   private isSyncing = false;
+  private syncStatus: 'synced' | 'syncing' | 'pending' | 'offline' = 'synced';
+
+  public getSyncStatus(): 'synced' | 'syncing' | 'pending' | 'offline' {
+    if (typeof window !== 'undefined' && !navigator.onLine) return 'offline';
+    if (this.isSyncing) return 'syncing';
+    if (this.getSyncQueue().length > 0) return 'pending';
+    return this.syncStatus;
+  }
+
+  public setSyncStatus(status: 'synced' | 'syncing' | 'pending' | 'offline'): void {
+    this.syncStatus = status;
+    this.notify();
+  }
+
+  public getPendingQueueCount(): number {
+    return this.getSyncQueue().length;
+  }
 
   private getSyncQueue(): Array<{ id: string; table: string; action: string; payload: any }> {
     if (typeof window === 'undefined') return [];
@@ -880,6 +898,7 @@ class DataStore {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem('dims_pending_sync_queue', JSON.stringify(queue));
+      this.notify();
     } catch (e) {
       console.error('Failed to save sync queue:', e);
     }
@@ -888,12 +907,49 @@ class DataStore {
   public enqueueMutation(action: string, table: string, payload: any): void {
     const queue = this.getSyncQueue();
     queue.push({
-      id: `queue-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       action,
       table,
       payload,
     });
     this.saveSyncQueue(queue);
+    this.setSyncStatus('pending');
+  }
+
+  public async dispatchMutation(action: string, table: string, payload: any): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+
+    // Offline -> directly queue
+    if (!navigator.onLine) {
+      this.enqueueMutation(action, table, payload);
+      return true;
+    }
+
+    try {
+      this.setSyncStatus('syncing');
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, table, payload }),
+      });
+
+      if (!res.ok) {
+        this.enqueueMutation(action, table, payload);
+        return false;
+      }
+
+      const data = await res.json();
+      if (!data.success) {
+        this.enqueueMutation(action, table, payload);
+        return false;
+      }
+
+      this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
+      return true;
+    } catch {
+      this.enqueueMutation(action, table, payload);
+      return false;
+    }
   }
 
   public async processPendingSyncQueue(): Promise<void> {
@@ -901,6 +957,26 @@ class DataStore {
     const queue = this.getSyncQueue();
     if (queue.length === 0) return;
 
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mutations: queue }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          this.saveSyncQueue([]);
+          this.setSyncStatus('synced');
+          return;
+        }
+      }
+    } catch {
+      // Keep queue for next attempt
+    }
+
+    // Direct Supabase client fallback if client credentials exist
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
@@ -921,193 +997,244 @@ class DataStore {
       }
     }
     this.saveSyncQueue(remainingQueue);
+    this.setSyncStatus(remainingQueue.length > 0 ? 'pending' : 'synced');
+  }
+
+  private applySyncData(data: {
+    rooms?: any[];
+    bedSlots?: any[];
+    dormers?: any[];
+    assignments?: any[];
+    categories?: any[];
+    items?: any[];
+    visitorLogs?: any[];
+    announcements?: any[];
+    activityLogs?: any[];
+  }): void {
+    if (data.rooms && data.rooms.length > 0) {
+      const mappedRooms: Room[] = data.rooms.map((r: any) => ({
+        id: r.id,
+        roomNumber: r.room_number,
+        floor: r.floor,
+        wing: r.wing || '',
+        type: r.type,
+        capacity: r.capacity,
+        status: r.status,
+        monthlyRate: Number(r.monthly_rate) || 0,
+        notes: r.notes || '',
+        bedSlots: (data.bedSlots || [])
+          .filter((s: any) => s.room_id === r.id)
+          .map((s: any) => ({
+            id: s.id,
+            roomId: s.room_id,
+            slotLabel: s.slot_label,
+            isOccupied: s.is_occupied || false,
+          })),
+      }));
+      this.setItem('rooms', mappedRooms);
+    }
+
+    if (data.dormers && data.dormers.length > 0) {
+      const roomsCache = this.getItem<Room[]>('rooms', INITIAL_ROOMS);
+      const mappedDormers: Dormer[] = data.dormers.map((d: any) => {
+        const asg: any = (data.assignments || []).find((a: any) => a.dormer_id === d.id);
+        const room = asg ? roomsCache.find((r) => r.id === asg.room_id) : undefined;
+        const slot = room ? room.bedSlots?.find((s) => s.id === asg.bed_slot_id) : undefined;
+
+        return {
+          id: d.id,
+          type: d.type,
+          firstName: d.first_name,
+          lastName: d.last_name,
+          email: d.email,
+          contactNo: d.contact_no,
+          gender: d.gender,
+          emergencyName: d.emergency_name,
+          emergencyContact: d.emergency_contact,
+          emergencyRelationship: d.emergency_relationship,
+          photoUrl: d.photo_url,
+          studentIdNo: d.student_id_no,
+          yearLevel: d.year_level,
+          section: d.section,
+          course: d.course,
+          employeeIdNo: d.employee_id_no,
+          department: d.department,
+          position: d.position,
+          externalId: d.external_id,
+          organization: d.organization,
+          purposeOfStay: d.purpose_of_stay,
+          expectedDeparture: d.expected_departure,
+          status: d.status,
+          createdAt: d.created_at,
+          updatedAt: d.updated_at,
+          currentAssignment: asg
+            ? {
+                id: asg.id,
+                roomId: asg.room_id,
+                roomNumber: room?.roomNumber || 'Unknown',
+                bedSlotId: asg.bed_slot_id,
+                slotLabel: slot?.slotLabel || 'Assigned',
+                checkInDate: asg.check_in_date,
+                checkOutDate: asg.check_out_date,
+              }
+            : undefined,
+        };
+      });
+      this.setItem('dormers', mappedDormers);
+    }
+
+    if (data.categories && data.categories.length > 0) {
+      const mappedCategories: InventoryCategory[] = data.categories.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description || '',
+      }));
+      this.setItem('categories', mappedCategories);
+    }
+
+    if (data.items && data.items.length > 0) {
+      const categoriesCache = this.getItem<InventoryCategory[]>('categories', INITIAL_CATEGORIES);
+      const mappedItems: InventoryItem[] = data.items.map((i: any) => {
+        const cat = categoriesCache.find((c) => c.id === i.category_id);
+        return {
+          id: i.id,
+          categoryId: i.category_id || '',
+          categoryName: cat?.name || 'Uncategorized',
+          itemCode: i.item_code,
+          name: i.name,
+          description: i.description || '',
+          unit: i.unit || 'pcs',
+          minStock: i.min_stock || 0,
+          currentStock: i.current_stock || 0,
+          location: i.location || 'Central Storage',
+          photoUrl: i.photo_url,
+          qrCodeData: i.qr_code_data || `DIMS:ITEM:${i.item_code}`,
+          isActive: i.is_active ?? true,
+          createdAt: i.created_at,
+          updatedAt: i.updated_at,
+        };
+      });
+      this.setItem('items', mappedItems);
+    }
+
+    if (data.visitorLogs && data.visitorLogs.length > 0) {
+      const dormersCache = this.getItem<Dormer[]>('dormers', INITIAL_DORMERS);
+      const mappedVisitors: VisitorLog[] = data.visitorLogs.map((v: any) => {
+        const dormer = dormersCache.find((d) => d.id === v.dormer_visited_id);
+        return {
+          id: v.id,
+          visitorName: v.visitor_name,
+          contact: v.contact || '',
+          purpose: v.purpose,
+          dormerVisitedId: v.dormer_visited_id,
+          dormerVisitedName: dormer ? `${dormer.firstName} ${dormer.lastName}` : undefined,
+          timeIn: v.time_in,
+          timeOut: v.time_out,
+          notes: v.notes,
+          loggedBy: 'Maria Joy Clemente',
+          createdAt: v.created_at,
+        };
+      });
+      this.setItem('visitor_logs', mappedVisitors);
+    }
+
+    if (data.announcements && data.announcements.length > 0) {
+      const mappedAnnouncements: Announcement[] = data.announcements.map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        body: a.body,
+        targetAudience: a.target_audience,
+        sentToCount: a.sent_to_count || 0,
+        failedCount: a.failed_count || 0,
+        status: a.status,
+        sentAt: a.sent_at,
+        brevoMessageId: a.brevo_message_id,
+        createdBy: a.created_by || 'Maria Joy Clemente',
+        createdAt: a.created_at,
+      }));
+      this.setItem('announcements', mappedAnnouncements);
+    }
+
+    if (data.activityLogs && data.activityLogs.length > 0) {
+      const mappedLogs: ActivityLog[] = data.activityLogs.map((l: any) => ({
+        id: l.id,
+        actorName: l.actor_name,
+        action: l.action,
+        module: l.module,
+        targetId: l.target_id,
+        detail: l.detail,
+        createdAt: l.created_at,
+      }));
+      this.setItem('activity_logs', mappedLogs);
+    }
   }
 
   public async syncFromSupabase(): Promise<void> {
     if (typeof window === 'undefined' || !navigator.onLine || this.isSyncing) return;
     this.isSyncing = true;
+    this.setSyncStatus('syncing');
+
     try {
+      // 1. Try server-side authenticated GET /api/sync
+      const res = await fetch('/api/sync');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          this.applySyncData(json.data);
+          await this.processPendingSyncQueue();
+          this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
+          this.notify();
+          return;
+        }
+      }
+
+      // 2. Direct Supabase client fallback
       const supabase = getSupabaseClient();
-      if (!supabase) return;
-
-      // 1. Fetch Rooms & Bed Slots
-      const { data: dbRooms } = await supabase.from('rooms').select('*');
-      const { data: dbSlots } = await supabase.from('bed_slots').select('*');
-      if (dbRooms && dbRooms.length > 0) {
-        const mappedRooms: Room[] = dbRooms.map((r: any) => ({
-          id: r.id,
-          roomNumber: r.room_number,
-          floor: r.floor,
-          wing: r.wing || '',
-          type: r.type,
-          capacity: r.capacity,
-          status: r.status,
-          monthlyRate: Number(r.monthly_rate) || 0,
-          notes: r.notes || '',
-          bedSlots: (dbSlots || [])
-            .filter((s: any) => s.room_id === r.id)
-            .map((s: any) => ({
-              id: s.id,
-              roomId: s.room_id,
-              slotLabel: s.slot_label,
-              isOccupied: s.is_occupied || false,
-            })),
-        }));
-        this.setItem('rooms', mappedRooms);
+      if (!supabase) {
+        this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
+        return;
       }
 
-      // 2. Fetch Dormers & Assignments
-      const { data: dbDormers } = await supabase.from('dormers').select('*');
-      const { data: dbAssignments } = await supabase.from('room_assignments').select('*').eq('is_current', true);
-      if (dbDormers && dbDormers.length > 0) {
-        const roomsCache = this.getItem<Room[]>('rooms', INITIAL_ROOMS);
-        const mappedDormers: Dormer[] = dbDormers.map((d: any) => {
-          const asg: any = (dbAssignments || []).find((a: any) => a.dormer_id === d.id);
-          const room = asg ? roomsCache.find((r) => r.id === asg.room_id) : undefined;
-          const slot = room ? room.bedSlots?.find((s) => s.id === asg.bed_slot_id) : undefined;
+      const [
+        { data: rooms },
+        { data: bedSlots },
+        { data: dormers },
+        { data: assignments },
+        { data: categories },
+        { data: items },
+        { data: visitorLogs },
+        { data: announcements },
+        { data: activityLogs },
+      ] = await Promise.all([
+        supabase.from('rooms').select('*'),
+        supabase.from('bed_slots').select('*'),
+        supabase.from('dormers').select('*'),
+        supabase.from('room_assignments').select('*').eq('is_current', true),
+        supabase.from('categories').select('*'),
+        supabase.from('items').select('*'),
+        supabase.from('visitor_logs').select('*').order('created_at', { ascending: false }),
+        supabase.from('announcements').select('*').order('created_at', { ascending: false }),
+        supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(500),
+      ]);
 
-          return {
-            id: d.id,
-            type: d.type,
-            firstName: d.first_name,
-            lastName: d.last_name,
-            email: d.email,
-            contactNo: d.contact_no,
-            gender: d.gender,
-            emergencyName: d.emergency_name,
-            emergencyContact: d.emergency_contact,
-            emergencyRelationship: d.emergency_relationship,
-            photoUrl: d.photo_url,
-            studentIdNo: d.student_id_no,
-            yearLevel: d.year_level,
-            section: d.section,
-            course: d.course,
-            employeeIdNo: d.employee_id_no,
-            department: d.department,
-            position: d.position,
-            externalId: d.external_id,
-            organization: d.organization,
-            purposeOfStay: d.purpose_of_stay,
-            expectedDeparture: d.expected_departure,
-            status: d.status,
-            createdAt: d.created_at,
-            updatedAt: d.updated_at,
-            currentAssignment: asg
-              ? {
-                  id: asg.id,
-                  roomId: asg.room_id,
-                  roomNumber: room?.roomNumber || 'Unknown',
-                  bedSlotId: asg.bed_slot_id,
-                  slotLabel: slot?.slotLabel || 'Assigned',
-                  checkInDate: asg.check_in_date,
-                  checkOutDate: asg.check_out_date,
-                }
-              : undefined,
-          };
-        });
-        this.setItem('dormers', mappedDormers);
-      }
+      this.applySyncData({
+        rooms: rooms || undefined,
+        bedSlots: bedSlots || undefined,
+        dormers: dormers || undefined,
+        assignments: assignments || undefined,
+        categories: categories || undefined,
+        items: items || undefined,
+        visitorLogs: visitorLogs || undefined,
+        announcements: announcements || undefined,
+        activityLogs: activityLogs || undefined,
+      });
 
-      // 3. Fetch Categories
-      const { data: dbCategories } = await supabase.from('categories').select('*');
-      if (dbCategories && dbCategories.length > 0) {
-        const mappedCategories: InventoryCategory[] = dbCategories.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          description: c.description || '',
-        }));
-        this.setItem('categories', mappedCategories);
-      }
-
-      // 4. Fetch Inventory Items
-      const { data: dbItems } = await supabase.from('items').select('*');
-      if (dbItems && dbItems.length > 0) {
-        const categoriesCache = this.getItem<InventoryCategory[]>('categories', INITIAL_CATEGORIES);
-        const mappedItems: InventoryItem[] = dbItems.map((i: any) => {
-          const cat = categoriesCache.find((c) => c.id === i.category_id);
-          return {
-            id: i.id,
-            categoryId: i.category_id || '',
-            categoryName: cat?.name || 'Uncategorized',
-            itemCode: i.item_code,
-            name: i.name,
-            description: i.description || '',
-            unit: i.unit || 'pcs',
-            minStock: i.min_stock || 0,
-            currentStock: i.current_stock || 0,
-            location: i.location || 'Central Storage',
-            photoUrl: i.photo_url,
-            qrCodeData: i.qr_code_data || `DIMS:ITEM:${i.item_code}`,
-            isActive: i.is_active ?? true,
-            createdAt: i.created_at,
-            updatedAt: i.updated_at,
-          };
-        });
-        this.setItem('items', mappedItems);
-      }
-
-      // 5. Fetch Visitor Logs
-      const { data: dbVisitors } = await supabase.from('visitor_logs').select('*').order('created_at', { ascending: false });
-      if (dbVisitors && dbVisitors.length > 0) {
-        const dormersCache = this.getItem<Dormer[]>('dormers', INITIAL_DORMERS);
-        const mappedVisitors: VisitorLog[] = dbVisitors.map((v: any) => {
-          const dormer = dormersCache.find((d) => d.id === v.dormer_visited_id);
-          return {
-            id: v.id,
-            visitorName: v.visitor_name,
-            contact: v.contact || '',
-            purpose: v.purpose,
-            dormerVisitedId: v.dormer_visited_id,
-            dormerVisitedName: dormer ? `${dormer.firstName} ${dormer.lastName}` : undefined,
-            timeIn: v.time_in,
-            timeOut: v.time_out,
-            notes: v.notes,
-            loggedBy: 'Maria Joy Clemente',
-            createdAt: v.created_at,
-          };
-        });
-        this.setItem('visitor_logs', mappedVisitors);
-      }
-
-      // 6. Fetch Announcements
-      const { data: dbAnnouncements } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
-      if (dbAnnouncements && dbAnnouncements.length > 0) {
-        const mappedAnnouncements: Announcement[] = dbAnnouncements.map((a: any) => ({
-          id: a.id,
-          title: a.title,
-          body: a.body,
-          targetAudience: a.target_audience,
-          sentToCount: a.sent_to_count || 0,
-          failedCount: a.failed_count || 0,
-          status: a.status,
-          sentAt: a.sent_at,
-          brevoMessageId: a.brevo_message_id,
-          createdBy: a.created_by || 'Maria Joy Clemente',
-          createdAt: a.created_at,
-        }));
-        this.setItem('announcements', mappedAnnouncements);
-      }
-
-      // 7. Fetch Activity Logs
-      const { data: dbLogs } = await supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(500);
-      if (dbLogs && dbLogs.length > 0) {
-        const mappedLogs: ActivityLog[] = dbLogs.map((l: any) => ({
-          id: l.id,
-          actorName: l.actor_name,
-          action: l.action,
-          module: l.module,
-          targetId: l.target_id,
-          detail: l.detail,
-          createdAt: l.created_at,
-        }));
-        this.setItem('activity_logs', mappedLogs);
-      }
-
-      // Process any pending offline mutations
       await this.processPendingSyncQueue();
+      this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
       this.notify();
     } catch (err) {
       console.warn('Supabase sync notice:', err);
+      this.setSyncStatus(this.getPendingQueueCount() > 0 ? 'pending' : 'synced');
     } finally {
       this.isSyncing = false;
     }
@@ -1167,13 +1294,14 @@ class DataStore {
 
   public addRoom(roomData: Omit<Room, 'id' | 'bedSlots'>): Room {
     const rooms = this.getRooms();
-    const newId = `room-${Date.now()}`;
+    const newId = generateUUID();
     const bedSlots: BedSlot[] = [];
 
     for (let i = 0; i < roomData.capacity; i++) {
       const char = String.fromCharCode(65 + i);
+      const slotId = generateUUID();
       bedSlots.push({
-        id: `slot-${newId}-${char.toLowerCase()}`,
+        id: slotId,
         roomId: newId,
         slotLabel: `Bed ${char}`,
         isOccupied: false,
@@ -1189,6 +1317,28 @@ class DataStore {
     rooms.push(newRoom);
     this.setItem('rooms', rooms);
     this.logActivity('CREATE_ROOM', 'dormitory', `Added Room ${newRoom.roomNumber} (${newRoom.type}, capacity: ${newRoom.capacity}).`);
+
+    this.dispatchMutation('INSERT', 'rooms', {
+      id: newRoom.id,
+      room_number: newRoom.roomNumber,
+      floor: newRoom.floor,
+      wing: newRoom.wing,
+      type: newRoom.type,
+      capacity: newRoom.capacity,
+      status: newRoom.status,
+      monthly_rate: newRoom.monthlyRate,
+      notes: newRoom.notes,
+    });
+
+    for (const slot of bedSlots) {
+      this.dispatchMutation('INSERT', 'bed_slots', {
+        id: slot.id,
+        room_id: newRoom.id,
+        slot_label: slot.slotLabel,
+        is_occupied: false,
+      });
+    }
+
     return newRoom;
   }
 
@@ -1199,6 +1349,18 @@ class DataStore {
       rooms[idx] = { ...rooms[idx], ...updates };
       this.setItem('rooms', rooms);
       this.logActivity('UPDATE_ROOM', 'dormitory', `Updated Room ${rooms[idx].roomNumber} parameters.`);
+
+      const dataToUpdate: any = {};
+      if (updates.roomNumber !== undefined) dataToUpdate.room_number = updates.roomNumber;
+      if (updates.floor !== undefined) dataToUpdate.floor = updates.floor;
+      if (updates.wing !== undefined) dataToUpdate.wing = updates.wing;
+      if (updates.type !== undefined) dataToUpdate.type = updates.type;
+      if (updates.capacity !== undefined) dataToUpdate.capacity = updates.capacity;
+      if (updates.status !== undefined) dataToUpdate.status = updates.status;
+      if (updates.monthlyRate !== undefined) dataToUpdate.monthly_rate = updates.monthlyRate;
+      if (updates.notes !== undefined) dataToUpdate.notes = updates.notes;
+
+      this.dispatchMutation('UPDATE', 'rooms', { id, data: dataToUpdate });
     }
   }
 
@@ -1217,17 +1379,7 @@ class DataStore {
     const filtered = rooms.filter((r) => r.id !== id);
     this.setItem('rooms', filtered);
     this.logActivity('DELETE_ROOM', 'dormitory', `Deleted Room ${room.roomNumber}.`);
-
-    if (typeof window !== 'undefined' && navigator.onLine) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from('rooms').delete().eq('id', id).then(({ error }: any) => {
-          if (error) this.enqueueMutation('DELETE', 'rooms', { id });
-        });
-      }
-    } else {
-      this.enqueueMutation('DELETE', 'rooms', { id });
-    }
+    this.dispatchMutation('DELETE', 'rooms', { id });
     return true;
   }
 
@@ -1247,7 +1399,7 @@ class DataStore {
       return null as any;
     }
 
-    const newId = `dormer-${dormerData.type.slice(0, 3)}-${Date.now()}`;
+    const newId = generateUUID();
     const newDormer: Dormer = {
       ...dormerData,
       id: newId,
@@ -1288,24 +1440,13 @@ class DataStore {
       updated_at: newDormer.updatedAt,
     };
 
-    if (typeof window !== 'undefined' && navigator.onLine) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        supabase.from('dormers').insert(payload).then(({ error }: any) => {
-          if (error) this.enqueueMutation('INSERT', 'dormers', payload);
-        });
-      }
-    } else {
-      this.enqueueMutation('INSERT', 'dormers', payload);
-    }
-
+    this.dispatchMutation('INSERT', 'dormers', payload);
     return newDormer;
   }
 
   public bulkAddDormers(incomingDormers: Partial<Dormer>[], type: DormerType): number {
     const dormers = this.getDormers();
     let count = 0;
-    const dbPayloads: any[] = [];
 
     incomingDormers.forEach((item) => {
       if (item.firstName && item.lastName && item.email) {
@@ -1314,8 +1455,9 @@ class DataStore {
         );
         if (isDuplicate) return;
 
+        const newId = generateUUID();
         const newDormer: Dormer = {
-          id: `dormer-${type.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          id: newId,
           type,
           firstName: item.firstName,
           lastName: item.lastName,
@@ -1343,7 +1485,7 @@ class DataStore {
         dormers.unshift(newDormer);
         count++;
 
-        dbPayloads.push({
+        const p = {
           id: newDormer.id,
           type: newDormer.type,
           first_name: newDormer.firstName,
@@ -1368,28 +1510,13 @@ class DataStore {
           status: newDormer.status,
           created_at: newDormer.createdAt,
           updated_at: newDormer.updatedAt,
-        });
+        };
+        this.dispatchMutation('INSERT', 'dormers', p);
       }
     });
 
     this.setItem('dormers', dormers);
     this.logActivity('BULK_IMPORT_DORMERS', 'dormitory', `Imported ${count} ${type} records via CSV upload.`);
-
-    if (dbPayloads.length > 0) {
-      if (typeof window !== 'undefined' && navigator.onLine) {
-        const supabase = getSupabaseClient();
-        if (supabase) {
-          supabase.from('dormers').insert(dbPayloads).then(({ error }: any) => {
-            if (error) {
-              dbPayloads.forEach((p) => this.enqueueMutation('INSERT', 'dormers', p));
-            }
-          });
-        }
-      } else {
-        dbPayloads.forEach((p) => this.enqueueMutation('INSERT', 'dormers', p));
-      }
-    }
-
     return count;
   }
 
@@ -1400,6 +1527,30 @@ class DataStore {
       dormers[idx] = { ...dormers[idx], ...updates, updatedAt: new Date().toISOString() };
       this.setItem('dormers', dormers);
       this.logActivity('UPDATE_DORMER', 'dormitory', `Updated profile of ${dormers[idx].firstName} ${dormers[idx].lastName}.`);
+
+      const mapped: any = { updated_at: dormers[idx].updatedAt };
+      if (updates.firstName !== undefined) mapped.first_name = updates.firstName;
+      if (updates.lastName !== undefined) mapped.last_name = updates.lastName;
+      if (updates.email !== undefined) mapped.email = updates.email;
+      if (updates.contactNo !== undefined) mapped.contact_no = updates.contactNo;
+      if (updates.gender !== undefined) mapped.gender = updates.gender;
+      if (updates.emergencyName !== undefined) mapped.emergency_name = updates.emergencyName;
+      if (updates.emergencyContact !== undefined) mapped.emergency_contact = updates.emergencyContact;
+      if (updates.emergencyRelationship !== undefined) mapped.emergency_relationship = updates.emergencyRelationship;
+      if (updates.studentIdNo !== undefined) mapped.student_id_no = updates.studentIdNo;
+      if (updates.yearLevel !== undefined) mapped.year_level = updates.yearLevel;
+      if (updates.section !== undefined) mapped.section = updates.section;
+      if (updates.course !== undefined) mapped.course = updates.course;
+      if (updates.employeeIdNo !== undefined) mapped.employee_id_no = updates.employeeIdNo;
+      if (updates.department !== undefined) mapped.department = updates.department;
+      if (updates.position !== undefined) mapped.position = updates.position;
+      if (updates.externalId !== undefined) mapped.external_id = updates.externalId;
+      if (updates.organization !== undefined) mapped.organization = updates.organization;
+      if (updates.purposeOfStay !== undefined) mapped.purpose_of_stay = updates.purposeOfStay;
+      if (updates.expectedDeparture !== undefined) mapped.expected_departure = updates.expectedDeparture;
+      if (updates.status !== undefined) mapped.status = updates.status;
+
+      this.dispatchMutation('UPDATE', 'dormers', { id, data: mapped });
     }
   }
 
@@ -1416,6 +1567,7 @@ class DataStore {
     const filtered = dormers.filter((d) => d.id !== id);
     this.setItem('dormers', filtered);
     this.logActivity('DELETE_DORMER', 'dormitory', `Removed ${dormer.firstName} ${dormer.lastName} from system.`);
+    this.dispatchMutation('DELETE', 'dormers', { id });
   }
 
   // --- ROOM ASSIGNMENT / CHECK-IN / CHECKOUT ---
@@ -1448,36 +1600,26 @@ class DataStore {
     this.setItem('rooms', rooms);
 
     // Update dormer record
-    const asgId = `asg-${Date.now()}`;
+    const asgId = generateUUID();
+    const checkInDate = new Date().toISOString().split('T')[0];
     dormer.currentAssignment = {
       id: asgId,
       roomId: room.id,
       roomNumber: room.roomNumber,
       bedSlotId: slot.id,
       slotLabel: slot.slotLabel,
-      checkInDate: new Date().toISOString().split('T')[0],
+      checkInDate,
     };
     dormer.status = 'active';
     this.setItem('dormers', dormers);
 
-    // Sync assignment & bed slot status to Supabase
-    if (typeof window !== 'undefined' && navigator.onLine) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        Promise.resolve(
-          supabase.from('room_assignments').insert({
-            dormer_id: dormer.id,
-            room_id: room.id,
-            bed_slot_id: slot.id,
-            check_in_date: dormer.currentAssignment.checkInDate,
-            is_current: true,
-          })
-        ).catch(() => {});
-        Promise.resolve(
-          supabase.from('bed_slots').update({ is_occupied: true }).eq('id', slot.id)
-        ).catch(() => {});
-      }
-    }
+    // Sync atomic assignment via server handler
+    this.dispatchMutation('ASSIGN_BED', 'room_assignments', {
+      dormerId: dormer.id,
+      roomId: room.id,
+      bedSlotId: slot.id,
+      checkInDate,
+    });
 
     this.logActivity(
       'CHECK_IN',
@@ -1499,6 +1641,13 @@ class DataStore {
     dormer.status = 'checked_out';
     this.setItem('dormers', dormers);
 
+    // Sync atomic checkout via server handler
+    this.dispatchMutation('CHECKOUT_DORMER', 'room_assignments', {
+      dormerId,
+      roomId,
+      bedSlotId,
+    });
+
     this.logActivity(
       'CHECK_OUT',
       'dormitory',
@@ -1513,8 +1662,17 @@ class DataStore {
     if (!dormer) return false;
 
     const oldRoomNumber = dormer.currentAssignment?.roomNumber || 'None';
+    const oldBedSlotId = dormer.currentAssignment?.bedSlotId;
+
     const success = this.assignDormerToBed(dormerId, newRoomId, newBedSlotId);
     if (success) {
+      this.dispatchMutation('TRANSFER_BED', 'room_assignments', {
+        dormerId,
+        oldBedSlotId,
+        newRoomId,
+        newBedSlotId,
+        checkInDate: new Date().toISOString().split('T')[0],
+      });
       this.logActivity(
         'TRANSFER_DORMER',
         'dormitory',
@@ -1555,7 +1713,7 @@ class DataStore {
 
   public async addInventoryItem(itemData: Omit<InventoryItem, 'id' | 'qrCodeData' | 'createdAt' | 'updatedAt'>): Promise<InventoryItem> {
     const items = this.getItems();
-    const newId = `item-${Date.now()}`;
+    const newId = generateUUID();
     const qrData = `DIMS:ASR:${itemData.itemCode}:${newId}`;
 
     const newItem: InventoryItem = {
@@ -1569,6 +1727,22 @@ class DataStore {
     items.unshift(newItem);
     this.setItem('items', items);
     this.logActivity('CREATE_ITEM', 'inventory', `Added catalog item: ${newItem.name} (${newItem.itemCode}).`);
+
+    this.dispatchMutation('INSERT', 'items', {
+      id: newItem.id,
+      category_id: newItem.categoryId,
+      item_code: newItem.itemCode,
+      name: newItem.name,
+      description: newItem.description,
+      unit: newItem.unit,
+      min_stock: newItem.minStock,
+      current_stock: newItem.currentStock,
+      location: newItem.location,
+      photo_url: newItem.photoUrl,
+      qr_code_data: newItem.qrCodeData,
+      is_active: newItem.isActive,
+    });
+
     return newItem;
   }
 
@@ -1579,6 +1753,19 @@ class DataStore {
       items[idx] = { ...items[idx], ...updates, updatedAt: new Date().toISOString() };
       this.setItem('items', items);
       this.logActivity('UPDATE_ITEM', 'inventory', `Updated inventory item: ${items[idx].name}.`);
+
+      const mapped: any = { updated_at: items[idx].updatedAt };
+      if (updates.name !== undefined) mapped.name = updates.name;
+      if (updates.itemCode !== undefined) mapped.item_code = updates.itemCode;
+      if (updates.categoryId !== undefined) mapped.category_id = updates.categoryId;
+      if (updates.description !== undefined) mapped.description = updates.description;
+      if (updates.unit !== undefined) mapped.unit = updates.unit;
+      if (updates.minStock !== undefined) mapped.min_stock = updates.minStock;
+      if (updates.currentStock !== undefined) mapped.current_stock = updates.currentStock;
+      if (updates.location !== undefined) mapped.location = updates.location;
+      if (updates.isActive !== undefined) mapped.is_active = updates.isActive;
+
+      this.dispatchMutation('UPDATE', 'items', { id, data: mapped });
     }
   }
 
@@ -1590,6 +1777,7 @@ class DataStore {
     const filtered = items.filter((i) => i.id !== id);
     this.setItem('items', filtered);
     this.logActivity('DELETE_ITEM', 'inventory', `Removed ${item.name} (${item.itemCode}) from catalog.`);
+    this.dispatchMutation('DELETE', 'items', { id });
   }
 
   // --- STOCK TRANSACTIONS ---
@@ -1643,7 +1831,7 @@ class DataStore {
     }
 
     const tx: StockTransaction = {
-      id: `tx-${Date.now()}`,
+      id: generateUUID(),
       itemId: item.id,
       itemCode: item.itemCode,
       itemName: item.name,
@@ -1671,6 +1859,12 @@ class DataStore {
     if (params.type === 'out' && params.roomId && roomNumber) {
       this.assignItemToRoom(params.roomId, roomNumber, item.id, item.name, item.itemCode, params.quantity, params.condition || 'good');
     }
+
+    // Sync item stock change to cloud
+    this.dispatchMutation('UPDATE', 'items', {
+      id: item.id,
+      data: { current_stock: item.currentStock },
+    });
 
     this.logActivity(
       `STOCK_${params.type.toUpperCase()}`,
@@ -1702,7 +1896,7 @@ class DataStore {
       existing.quantity += quantity;
     } else {
       list.unshift({
-        id: `ri-${Date.now()}`,
+        id: generateUUID(),
         roomId,
         roomNumber,
         itemId,
@@ -1759,7 +1953,7 @@ class DataStore {
     const logs = this.getVisitorLogs();
     const newLog: VisitorLog = {
       ...logData,
-      id: `vlog-${Date.now()}`,
+      id: generateUUID(),
       loggedBy: this.getCurrentUser().fullName,
       createdAt: new Date().toISOString(),
     };
@@ -1767,6 +1961,19 @@ class DataStore {
     logs.unshift(newLog);
     this.setItem('visitor_logs', logs);
     this.logActivity('VISITOR_ENTRY', 'dormitory', `Logged visitor: ${newLog.visitorName} (Purpose: ${newLog.purpose}).`);
+
+    this.dispatchMutation('INSERT', 'visitor_logs', {
+      id: newLog.id,
+      visitor_name: newLog.visitorName,
+      contact: newLog.contact,
+      purpose: newLog.purpose,
+      dormer_visited_id: newLog.dormerVisitedId,
+      time_in: newLog.timeIn,
+      time_out: newLog.timeOut,
+      notes: newLog.notes,
+      created_at: newLog.createdAt,
+    });
+
     return newLog;
   }
 
@@ -1777,6 +1984,11 @@ class DataStore {
       log.timeOut = new Date().toISOString();
       this.setItem('visitor_logs', logs);
       this.logActivity('VISITOR_EXIT', 'dormitory', `Visitor ${log.visitorName} checked out at ${new Date().toLocaleTimeString()}.`);
+
+      this.dispatchMutation('UPDATE', 'visitor_logs', {
+        id,
+        data: { time_out: log.timeOut },
+      });
     }
   }
 
@@ -1830,8 +2042,9 @@ class DataStore {
       apiKey: settings.brevoApiKey,
     });
 
+    const announcementId = generateUUID();
     const announcement: Announcement = {
-      id: `ann-${Date.now()}`,
+      id: announcementId,
       title: params.title,
       body: params.body,
       targetAudience: params.targetAudience,
@@ -1845,8 +2058,8 @@ class DataStore {
       createdBy: this.getCurrentUser().fullName,
       createdAt: new Date().toISOString(),
       recipients: targetDormers.map((d) => ({
-        id: `recip-${d.id}-${Date.now()}`,
-        announcementId: `ann-${Date.now()}`,
+        id: generateUUID(),
+        announcementId,
         dormerId: d.id,
         recipientName: `${d.firstName} ${d.lastName}`,
         email: d.email,
@@ -1857,6 +2070,20 @@ class DataStore {
     const announcements = this.getAnnouncements();
     announcements.unshift(announcement);
     this.setItem('announcements', announcements);
+
+    this.dispatchMutation('INSERT', 'announcements', {
+      id: announcement.id,
+      title: announcement.title,
+      body: announcement.body,
+      target_audience: announcement.targetAudience,
+      sent_to_count: announcement.sentToCount,
+      failed_count: announcement.failedCount,
+      status: announcement.status,
+      sent_at: announcement.sentAt,
+      brevo_message_id: announcement.brevoMessageId,
+      created_by: announcement.createdBy,
+      created_at: announcement.createdAt,
+    });
 
     this.logActivity(
       'SEND_ANNOUNCEMENT',
@@ -1880,7 +2107,7 @@ class DataStore {
     const logs = this.getItem<ActivityLog[]>('activity_logs', INITIAL_LOGS);
     const actorName = typeof window !== 'undefined' ? (localStorage.getItem('dims_staff_name') || this.getCurrentUser().fullName) : this.getCurrentUser().fullName;
     const newLog: ActivityLog = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      id: generateUUID(),
       actorName,
       action,
       module,
@@ -1892,33 +2119,15 @@ class DataStore {
     if (logs.length > 500) logs.pop();
     this.setItem('activity_logs', logs);
 
-    // Sync to Supabase in background
-    if (typeof window !== 'undefined' && navigator.onLine) {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        Promise.resolve(
-          supabase.from('activity_logs').insert({
-            actor_name: newLog.actorName,
-            action: newLog.action,
-            module: newLog.module,
-            detail: newLog.detail,
-            created_at: newLog.createdAt,
-          })
-        )
-          .then((res: any) => {
-            if (res?.error) {
-              this.enqueueMutation('INSERT', 'activity_logs', {
-                actor_name: newLog.actorName,
-                action: newLog.action,
-                module: newLog.module,
-                detail: newLog.detail,
-                created_at: newLog.createdAt,
-              });
-            }
-          })
-          .catch(() => {});
-      }
-    }
+    // Sync to Supabase cloud
+    this.dispatchMutation('INSERT', 'activity_logs', {
+      id: newLog.id,
+      actor_name: newLog.actorName,
+      action: newLog.action,
+      module: newLog.module,
+      detail: newLog.detail,
+      created_at: newLog.createdAt,
+    });
   }
 
   // --- DASHBOARD METRICS SUMMARY ---
@@ -1979,3 +2188,12 @@ class DataStore {
 }
 
 export const store = new DataStore();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    store.syncFromSupabase();
+  });
+  window.addEventListener('offline', () => {
+    store.setSyncStatus('offline');
+  });
+}
