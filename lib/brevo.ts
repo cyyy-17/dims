@@ -60,11 +60,9 @@ export async function sendBrevoAnnouncement({
     }
   }
 
-  // Server-side direct dispatch
   const activeApiKey =
     apiKey ||
     process.env.BREVO_API_KEY ||
-    process.env.NEXT_PUBLIC_BREVO_API_KEY ||
     '';
 
   const defaultSenderEmail =

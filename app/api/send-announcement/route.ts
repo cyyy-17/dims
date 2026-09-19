@@ -84,11 +84,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Strictly read server environment variable (never client-supplied)
-    const activeApiKey =
-      process.env.BREVO_API_KEY ||
-      process.env.NEXT_PUBLIC_BREVO_API_KEY ||
-      '';
+    const activeApiKey = process.env.BREVO_API_KEY || '';
 
     // If key is empty or placeholder, run in safe standalone simulation mode
     if (!activeApiKey || activeApiKey.includes('your-brevo') || activeApiKey.trim() === '') {
