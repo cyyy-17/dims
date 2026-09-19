@@ -103,13 +103,13 @@ export default function RoomItemsPage() {
       {/* Filter Row */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-[#E4E4E0]">
         <div className="relative w-full max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A]" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by asset name, code, or room number..."
-            className="input-minimal pl-9"
+            className="input-minimal !pl-10"
           />
         </div>
 

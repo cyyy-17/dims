@@ -134,14 +134,14 @@ export default function LoginPage() {
                 Staff Office Email
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-[#8C8C8A] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-[#8C8C8A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="aseanresidences@firstasia.edu.ph"
-                  className="input-minimal pl-9 pr-3 transition-all"
+                  className="input-minimal !pl-10 !pr-3 transition-all"
                 />
               </div>
             </div>
@@ -153,19 +153,19 @@ export default function LoginPage() {
                 </label>
               </div>
               <div className="relative">
-                <Lock className="w-4 h-4 text-[#8C8C8A] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[#8C8C8A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="input-minimal pl-9 pr-10 transition-all"
+                  className="input-minimal !pl-10 !pr-10 transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8C8C8A] hover:text-[#141414] transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C8C8A] hover:text-[#141414] transition-colors p-1 flex items-center justify-center"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>

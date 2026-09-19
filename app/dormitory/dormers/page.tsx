@@ -211,13 +211,13 @@ export default function DormersPage() {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-[#E4E4E0]">
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="relative w-full">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A]" />
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name, student ID, employee ID, course, or email..."
-                className="input-minimal pl-9"
+                className="input-minimal !pl-10"
               />
             </div>
           </div>
