@@ -60,7 +60,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* LEFT PANEL: Branding & Feature Overview (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#4F46E5] via-[#6366F1] to-[#818CF8] flex-col justify-between p-12 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-[#4F46E5] via-[#6366F1] to-[#818CF8] flex-col justify-between p-12 relative overflow-hidden">
         {/* Decorative circles */}
         <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-white/5 -translate-y-28 translate-x-28 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-white/5 translate-y-36 -translate-x-36 pointer-events-none" />
