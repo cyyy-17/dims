@@ -7,8 +7,8 @@ import { getSupabaseClient } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('aseanresidences@firstasia.edu.ph');
-  const [password, setPassword] = useState('ASRStaff2026!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -81,11 +81,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillDefaultCredentials = () => {
-    setEmail('aseanresidences@firstasia.edu.ph');
-    setPassword('ASRStaff2026!');
-    setErrorMessage(null);
-  };
 
   return (
     <div className="min-h-screen bg-[#F8F8F6] flex flex-col justify-center items-center p-4 sm:p-6 lg:p-8">
@@ -190,16 +185,6 @@ export default function LoginPage() {
             </div>
           </form>
 
-          {/* Quick-fill button */}
-          <div className="pt-2 border-t border-[#E4E4E0] text-center">
-            <button
-              type="button"
-              onClick={fillDefaultCredentials}
-              className="text-xs text-[#4F46E5] hover:text-[#4338CA] font-medium transition-colors cursor-pointer"
-            >
-              Autofill Staff Office Account
-            </button>
-          </div>
         </div>
 
         {/* Footer info */}
