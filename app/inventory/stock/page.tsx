@@ -16,6 +16,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   RotateCcw,
+  Calendar,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 
@@ -23,6 +24,8 @@ export default function StockPage() {
   const [transactions, setTransactions] = useState<StockTransaction[]>(store.getTransactions());
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -36,14 +39,24 @@ export default function StockPage() {
     if (typeFilter !== 'all' && tx.type !== typeFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      return (
+      const match =
         tx.itemName.toLowerCase().includes(q) ||
         tx.itemCode.toLowerCase().includes(q) ||
         (tx.referenceNo && tx.referenceNo.toLowerCase().includes(q)) ||
         (tx.supplier && tx.supplier.toLowerCase().includes(q)) ||
         (tx.purpose && tx.purpose.toLowerCase().includes(q)) ||
-        (tx.roomNumber && tx.roomNumber.toLowerCase().includes(q))
-      );
+        (tx.roomNumber && tx.roomNumber.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (new Date(tx.createdAt) < start) return false;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      if (new Date(tx.createdAt) > end) return false;
     }
     return true;
   });
@@ -108,30 +121,68 @@ export default function StockPage() {
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-[#E4E4E0]">
-        <div className="relative w-full max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by item, reference no, room, or supplier..."
-            className="input-minimal pl-10!"
-          />
+      <div className="p-3.5 rounded-xl bg-white border border-[#E4E4E0] space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative w-full max-w-md">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by item, reference no, room, or supplier..."
+              className="input-minimal pl-10!"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-[#8C8C8A]" />
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="input-minimal w-auto text-xs"
+            >
+              <option value="all">All Movements (In, Out, Return)</option>
+              <option value="in">Stock In (Received)</option>
+              <option value="out">Stock Out (Issuance)</option>
+              <option value="return">Returns to Custody</option>
+            </select>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-[#8C8C8A]" />
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="input-minimal w-auto"
-          >
-            <option value="all">All Movements (In, Out, Return)</option>
-            <option value="in">Stock In (Received)</option>
-            <option value="out">Stock Out (Issuance)</option>
-            <option value="return">Returns to Custody</option>
-          </select>
+        {/* Row 2: Date Filters */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#F0F0EE] text-xs">
+          <div className="flex items-center gap-1.5 text-[#555552] font-medium">
+            <Calendar className="w-3.5 h-3.5 text-[#8C8C8A]" />
+            <span>Movement Date:</span>
+          </div>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="input-minimal py-1! px-2.5! text-xs w-auto"
+          />
+          <span className="text-[#8C8C8A]">To:</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="input-minimal py-1! px-2.5! text-xs w-auto"
+          />
+          {(startDate || endDate || searchQuery || typeFilter !== 'all') && (
+            <button
+              type="button"
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setSearchQuery('');
+                setTypeFilter('all');
+              }}
+              className="flex items-center gap-1 text-xs text-[#4F46E5] hover:text-[#4338CA] font-medium ml-auto cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset Filters
+            </button>
+          )}
         </div>
       </div>
 

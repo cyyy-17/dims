@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -12,10 +12,25 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+export const viewport: Viewport = {
+  themeColor: '#4F46E5',
+};
+
 export const metadata: Metadata = {
   title: 'DIMS — Dormitory & Inventory Management System | ASR Campus',
   description:
-    'Award-winning minimalist management system for school dormitory residents (students, employees, visitors), physical assets, and Brevo bulk email notices.',
+    'Management system for school dormitory residents, physical assets custody, and campus communications at ASR Field Campus.',
+  keywords: ['dormitory management', 'inventory system', 'DIMS', 'ASR campus', 'FAITH'],
+  openGraph: {
+    title: 'DIMS — ASR Dormitory & Inventory System',
+    description: 'Unified management for dormitory residents and physical asset custody.',
+    type: 'website',
+    locale: 'en_PH',
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 import { ToastProvider } from '@/components/ui/Toast';

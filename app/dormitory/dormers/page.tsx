@@ -28,6 +28,7 @@ import {
   Phone,
   Mail,
   ArrowRightLeft,
+  Archive,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
@@ -38,6 +39,7 @@ export default function DormersPage() {
   const [activeTab, setActiveTab] = useState<'all' | DormerType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showFormer, setShowFormer] = useState(false);
 
   // Modals & Drawers
   const [isDormerModalOpen, setIsDormerModalOpen] = useState(false);
@@ -58,14 +60,26 @@ export default function DormersPage() {
     return unsub;
   }, []);
 
+  const activeDormers = dormers.filter(
+    (d) => d.status !== 'checked_out' && d.status !== 'transferred'
+  );
+  const formerDormers = dormers.filter(
+    (d) => d.status === 'checked_out' || d.status === 'transferred'
+  );
+
+  const displayPool = showFormer ? formerDormers : activeDormers;
+
   const counts = {
-    all: dormers.length,
-    student: dormers.filter((d) => d.type === 'student').length,
-    employee: dormers.filter((d) => d.type === 'employee').length,
-    visitor: dormers.filter((d) => d.type === 'visitor').length,
+    all: displayPool.length,
+    student: displayPool.filter((d) => d.type === 'student').length,
+    employee: displayPool.filter((d) => d.type === 'employee').length,
+    visitor: displayPool.filter((d) => d.type === 'visitor').length,
   };
 
   const filteredDormers = dormers.filter((d) => {
+    const isFormer = d.status === 'checked_out' || d.status === 'transferred';
+    if (showFormer && !isFormer) return false;
+    if (!showFormer && isFormer) return false;
     if (activeTab !== 'all' && d.type !== activeTab) return false;
     if (statusFilter !== 'all' && d.status !== statusFilter) return false;
     if (searchQuery.trim()) {
@@ -129,19 +143,36 @@ export default function DormersPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-[#141414]">
-              Dormers Masterlist & Profiles
+              {showFormer ? 'Former Residents Archive' : 'Dormers Masterlist & Profiles'}
             </h1>
-            <Badge variant="default" size="sm">
-              {dormers.length} Total Registered
+            <Badge variant={showFormer ? 'neutral' : 'default'} size="sm">
+              {showFormer
+                ? `${formerDormers.length} Former Residents`
+                : `${activeDormers.length} Active Registered`}
             </Badge>
           </div>
           <p className="text-xs text-[#8C8C8A] mt-1">
-            Unified management for Students, Employees, and Authorized Campus Visitors
+            {showFormer
+              ? 'Historical archive of checked-out and transferred campus residents'
+              : 'Unified management for Students, Employees, and Authorized Campus Visitors'}
           </p>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setShowFormer((f) => !f)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+              showFormer
+                ? 'bg-[#EEF2FF] text-[#4F46E5] border-[#C7D2FE]'
+                : 'bg-white text-[#555552] border-[#E4E4E0] hover:bg-[#F8F8F6]'
+            }`}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            {showFormer ? 'Back to Active Roster' : 'Former Residents'}
+          </button>
+
           <Button
             size="sm"
             variant="secondary"

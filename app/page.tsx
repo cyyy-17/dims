@@ -35,6 +35,7 @@ import { DormerModal } from '@/components/dormitory/DormerModal';
 import { StockTransactionModal } from '@/components/inventory/StockTransactionModal';
 import { ComposeAnnouncementModal } from '@/components/announcements/ComposeAnnouncementModal';
 import { formatDateTime } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/EmptyState';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -286,34 +287,46 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="h-44 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={occupancyChartData}
-                  innerRadius={52}
-                  outerRadius={72}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {occupancyChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E4E4E0]">
-            {occupancyChartData.map((d) => (
-              <div key={d.name} className="flex items-center gap-2 text-xs">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                <span className="text-[#555552]">{d.name}:</span>
-                <strong className="text-[#141414] ml-auto">{d.value}</strong>
+          {occupancyChartData.length === 0 ? (
+            <div className="h-44 flex flex-col items-center justify-center text-center p-4">
+              <DoorOpen className="w-8 h-8 text-[#D4D4D0] mb-2" />
+              <p className="text-xs text-[#8C8C8A]">No room occupancy records yet.</p>
+              <Link href="/dormitory/rooms" className="text-xs text-[#4F46E5] hover:underline mt-1 font-medium">
+                Manage rooms &rarr;
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="h-44 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={occupancyChartData}
+                      innerRadius={52}
+                      outerRadius={72}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {occupancyChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#E4E4E0]">
+                {occupancyChartData.map((d) => (
+                  <div key={d.name} className="flex items-center gap-2 text-xs">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-[#555552]">{d.name}:</span>
+                    <strong className="text-[#141414] ml-auto">{d.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Chart 2: Dormer Demographics */}
@@ -416,32 +429,42 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="divide-y divide-[#E4E4E0]">
-            {metrics.recentTransactions.map((tx) => (
-              <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={tx.type === 'in' ? 'success' : tx.type === 'out' ? 'default' : 'warning'}
-                      size="sm"
-                    >
-                      {tx.type.toUpperCase()}
-                    </Badge>
-                    <span className="font-semibold text-[#141414]">{tx.itemName}</span>
+          {metrics.recentTransactions.length === 0 ? (
+            <EmptyState
+              icon={ArrowLeftRight}
+              title="No stock movements yet"
+              description="Record your first stock-in or stock-out to populate the asset ledger."
+              actionText="Record Movement"
+              onAction={() => setIsStockModalOpen(true)}
+            />
+          ) : (
+            <div className="divide-y divide-[#E4E4E0]">
+              {metrics.recentTransactions.map((tx) => (
+                <div key={tx.id} className="py-2.5 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={tx.type === 'in' ? 'success' : tx.type === 'out' ? 'default' : 'warning'}
+                        size="sm"
+                      >
+                        {tx.type.toUpperCase()}
+                      </Badge>
+                      <span className="font-semibold text-[#141414]">{tx.itemName}</span>
+                    </div>
+                    <p className="text-[11px] text-[#8C8C8A] mt-0.5">
+                      {tx.purpose || 'General issuance'} {tx.roomNumber ? `· Room ${tx.roomNumber}` : ''}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-[#8C8C8A] mt-0.5">
-                    {tx.purpose || 'General issuance'} {tx.roomNumber ? `· Room ${tx.roomNumber}` : ''}
-                  </p>
+                  <div className="text-right">
+                    <span className="font-mono font-bold text-[#141414]">
+                      {tx.type === 'in' ? '+' : '-'}{tx.quantity}
+                    </span>
+                    <p className="text-[10px] text-[#8C8C8A]">{formatDateTime(tx.createdAt)}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-mono font-bold text-[#141414]">
-                    {tx.type === 'in' ? '+' : '-'}{tx.quantity}
-                  </span>
-                  <p className="text-[10px] text-[#8C8C8A]">{formatDateTime(tx.createdAt)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Audit Log Stream */}
@@ -456,20 +479,26 @@ export default function DashboardPage() {
             <span className="text-[10px] uppercase font-mono text-[#8C8C8A]">Immutable</span>
           </div>
 
-          <div className="space-y-3 max-h-72 overflow-y-auto">
-            {metrics.recentActivityLogs.map((log) => (
-              <div key={log.id} className="p-3 rounded-lg bg-[#F8F8F6] border border-[#ECECE8] text-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono font-semibold text-[10px] uppercase text-[#4F46E5] bg-[#EEF2FF] px-1.5 py-0.5 rounded">
-                    {log.action}
-                  </span>
-                  <span className="text-[10px] text-[#8C8C8A]">{formatDateTime(log.createdAt)}</span>
+          {metrics.recentActivityLogs.length === 0 ? (
+            <div className="text-center py-8 text-xs text-[#8C8C8A]">
+              No activity has been recorded yet. Actions you take will appear here.
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-72 overflow-y-auto">
+              {metrics.recentActivityLogs.map((log) => (
+                <div key={log.id} className="p-3 rounded-lg bg-[#F8F8F6] border border-[#ECECE8] text-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono font-semibold text-[10px] uppercase text-[#4F46E5] bg-[#EEF2FF] px-1.5 py-0.5 rounded">
+                      {log.action}
+                    </span>
+                    <span className="text-[10px] text-[#8C8C8A]">{formatDateTime(log.createdAt)}</span>
+                  </div>
+                  <p className="text-[#2C2C2A] leading-relaxed">{log.detail}</p>
+                  <p className="text-[10px] text-[#8C8C8A] mt-1 font-mono">Actor: {log.actorName}</p>
                 </div>
-                <p className="text-[#2C2C2A] leading-relaxed">{log.detail}</p>
-                <p className="text-[10px] text-[#8C8C8A] mt-1 font-mono">Actor: {log.actorName}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

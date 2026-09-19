@@ -43,7 +43,7 @@ const INITIAL_SETTINGS: AppSettings = {
     process.env.NEXT_PUBLIC_BREVO_SENDER_EMAIL || 'aseanresidences@firstasia.edu.ph',
   brevoSenderName:
     process.env.NEXT_PUBLIC_BREVO_SENDER_NAME || 'ASEAN Student Residences',
-  brevoApiKey: process.env.NEXT_PUBLIC_BREVO_API_KEY || '',
+  brevoApiKey: '', // Key is server-only; managed via BREVO_API_KEY env var on the server
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
   supabaseConnected: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -220,7 +220,9 @@ const INITIAL_VISITOR_LOGS: VisitorLog[] = [];
 const INITIAL_ANNOUNCEMENTS: Announcement[] = [];
 const INITIAL_LOGS: ActivityLog[] = [];
 
-// Helper to get / set from localStorage
+// ─────────────────────────────────────────────────────────────
+// 1. STORAGE HELPERS & LOCAL PERSISTENCE
+// ─────────────────────────────────────────────────────────────
 class DataStore {
   private listeners: Set<() => void> = new Set();
 
@@ -280,7 +282,9 @@ class DataStore {
     });
   }
 
-  // --- SUPABASE CLOUD DATA LAYER & OFFLINE QUEUE ---
+  // ─────────────────────────────────────────────────────────────
+  // 2. SUPABASE CLOUD DATA LAYER & OFFLINE QUEUE
+  // ─────────────────────────────────────────────────────────────
   private isSyncing = false;
   private syncStatus: 'synced' | 'syncing' | 'pending' | 'offline' = 'synced';
 
@@ -656,7 +660,9 @@ class DataStore {
     }
   }
 
-  // --- SETTINGS & AUTH ---
+  // ─────────────────────────────────────────────────────────────
+  // 3. SETTINGS & AUTHENTICATION CONFIGURATION
+  // ─────────────────────────────────────────────────────────────
   public getSettings(): AppSettings {
     return this.getItem<AppSettings>('settings', INITIAL_SETTINGS);
   }
@@ -671,7 +677,9 @@ class DataStore {
     return this.getItem<StaffUser>('current_user', INITIAL_STAFF);
   }
 
-  // --- ROOMS ---
+  // ─────────────────────────────────────────────────────────────
+  // 4. ROOM & BED SLOT MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
   public getRooms(): Room[] {
     const rooms = this.getItem<Room[]>('rooms', INITIAL_ROOMS);
     const dormers = this.getDormers();
@@ -799,7 +807,9 @@ class DataStore {
     return true;
   }
 
-  // --- DORMERS (Students, Employees, Visitors) ---
+  // ─────────────────────────────────────────────────────────────
+  // 5. DORMER MANAGEMENT (Students, Employees, Visitors)
+  // ─────────────────────────────────────────────────────────────
   public getDormers(): Dormer[] {
     return this.getItem<Dormer[]>('dormers', INITIAL_DORMERS);
   }
@@ -1113,7 +1123,9 @@ class DataStore {
     }
   }
 
-  // --- INVENTORY ---
+  // ─────────────────────────────────────────────────────────────
+  // 6. INVENTORY & CATALOG MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
   public getCategories(): InventoryCategory[] {
     const categories = this.getItem<InventoryCategory[]>('categories', INITIAL_CATEGORIES);
     const items = this.getItems();
@@ -1196,7 +1208,9 @@ class DataStore {
     this.dispatchMutation('DELETE', 'items', { id });
   }
 
-  // --- STOCK TRANSACTIONS ---
+  // ─────────────────────────────────────────────────────────────
+  // 7. STOCK TRANSACTIONS & ASSET MOVEMENTS
+  // ─────────────────────────────────────────────────────────────
   public getTransactions(): StockTransaction[] {
     return this.getItem<StockTransaction[]>('transactions', INITIAL_TRANSACTIONS);
   }
@@ -1360,7 +1374,9 @@ class DataStore {
     return true;
   }
 
-  // --- VISITOR LOGS ---
+  // ─────────────────────────────────────────────────────────────
+  // 8. VISITOR LOGS & CAMPUS SECURITY REGISTER
+  // ─────────────────────────────────────────────────────────────
   public getVisitorLogs(): VisitorLog[] {
     return this.getItem<VisitorLog[]>('visitor_logs', INITIAL_VISITOR_LOGS);
   }
@@ -1408,7 +1424,9 @@ class DataStore {
     }
   }
 
-  // --- ANNOUNCEMENTS & BREVO BULK EMAIL ---
+  // ─────────────────────────────────────────────────────────────
+  // 9. ANNOUNCEMENTS & BREVO BULK EMAIL ENGINE
+  // ─────────────────────────────────────────────────────────────
   public getAnnouncements(): Announcement[] {
     return this.getItem<Announcement[]>('announcements', INITIAL_ANNOUNCEMENTS);
   }
@@ -1514,7 +1532,9 @@ class DataStore {
     };
   }
 
-  // --- IMMUTABLE ACTIVITY AUDIT LOG ---
+  // ─────────────────────────────────────────────────────────────
+  // 10. ACTIVITY LOGS & IMMUTABLE AUDIT TRAIL
+  // ─────────────────────────────────────────────────────────────
   public getActivityLogs(): ActivityLog[] {
     return this.getItem<ActivityLog[]>('activity_logs', INITIAL_LOGS);
   }
@@ -1546,7 +1566,9 @@ class DataStore {
     });
   }
 
-  // --- DASHBOARD METRICS SUMMARY ---
+  // ─────────────────────────────────────────────────────────────
+  // 11. DASHBOARD METRICS SUMMARY
+  // ─────────────────────────────────────────────────────────────
   public getDashboardMetrics() {
     const rooms = this.getRooms();
     const dormers = this.getDormers().filter((d) => d.status === 'active');

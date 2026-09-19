@@ -10,6 +10,7 @@ import { RoomModal } from '@/components/dormitory/RoomModal';
 import {
   Plus,
   Filter,
+  Search,
   User,
   Package,
   Edit2,
@@ -23,6 +24,7 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>(store.getRooms());
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterFloor, setFilterFloor] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
@@ -37,6 +39,13 @@ export default function RoomsPage() {
   const filteredRooms = rooms.filter((r) => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
     if (filterFloor !== 'all' && r.floor !== filterFloor) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match = `room ${r.roomNumber} ${r.type} ${r.wing || ''} ${r.floor || ''} ${r.notes || ''}`
+        .toLowerCase()
+        .includes(q);
+      if (!match) return false;
+    }
     return true;
   });
 
@@ -102,34 +111,46 @@ export default function RoomsPage() {
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-white border border-[#E4E4E0]">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-[#8C8C8A]" />
-          <span className="text-xs font-semibold text-[#141414]">Filter By:</span>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="input-minimal w-auto"
-          >
-            <option value="all">All Room Statuses</option>
-            <option value="available">Available Only</option>
-            <option value="partial">Partial Occupancy</option>
-            <option value="full">Full Occupancy</option>
-            <option value="maintenance">Under Maintenance</option>
-          </select>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-xl bg-white border border-[#E4E4E0]">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative w-full sm:w-56">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search room, wing..."
+              className="input-minimal pl-10! py-1.5! text-xs"
+            />
+          </div>
 
-          <select
-            value={filterFloor}
-            onChange={(e) => setFilterFloor(e.target.value)}
-            className="input-minimal w-auto"
-          >
-            <option value="all">All Floors</option>
-            <option value="1st Floor">1st Floor</option>
-            <option value="2nd Floor">2nd Floor</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-[#8C8C8A]" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="input-minimal w-auto py-1.5! text-xs"
+            >
+              <option value="all">All Room Statuses</option>
+              <option value="available">Available Only</option>
+              <option value="partial">Partial Occupancy</option>
+              <option value="full">Full Occupancy</option>
+              <option value="maintenance">Under Maintenance</option>
+            </select>
+
+            <select
+              value={filterFloor}
+              onChange={(e) => setFilterFloor(e.target.value)}
+              className="input-minimal w-auto py-1.5! text-xs"
+            >
+              <option value="all">All Floors</option>
+              <option value="1st Floor">1st Floor</option>
+              <option value="2nd Floor">2nd Floor</option>
+            </select>
+          </div>
         </div>
 
-        <div className="text-xs text-[#8C8C8A]">
+        <div className="text-xs text-[#8C8C8A] shrink-0">
           Showing <strong className="text-[#141414]">{filteredRooms.length}</strong> rooms
         </div>
       </div>

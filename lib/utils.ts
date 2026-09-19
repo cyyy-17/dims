@@ -10,7 +10,7 @@ export function formatDate(dateString?: string): string {
   try {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('en-PH', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -25,7 +25,7 @@ export function formatDateTime(dateString?: string): string {
   try {
     const d = new Date(dateString);
     if (isNaN(d.getTime())) return dateString;
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat('en-PH', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

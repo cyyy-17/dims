@@ -49,10 +49,17 @@ export default function AnnouncementsPage() {
   return (
     <AppShell>
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E4E4E0] pb-5">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#141414]">Bulk Announcements</h1>
-          <p className="text-xs text-[#8C8C8A]">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-[#141414]">
+              Announcements &amp; Bulk Email
+            </h1>
+            <Badge variant="default" size="sm">
+              {announcements.length} Sent
+            </Badge>
+          </div>
+          <p className="text-xs text-[#8C8C8A] mt-1">
             Dispatch official campus announcements to dormers via Brevo cloud bulk email.
           </p>
         </div>

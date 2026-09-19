@@ -13,6 +13,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { toast } from '@/components/ui/Toast';
 
 export default function ReportsPage() {
   const [selectedReport, setSelectedReport] = useState<
@@ -40,6 +41,21 @@ export default function ReportsPage() {
   }, []);
 
   const handlePrint = () => {
+    const hasData =
+      selectedReport === 'occupancy'
+        ? rooms.length > 0
+        : selectedReport === 'dormers'
+        ? dormers.length > 0
+        : selectedReport === 'inventory'
+        ? items.length > 0
+        : selectedReport === 'room_assets'
+        ? roomInventory.filter((r) => !r.returnedAt).length > 0
+        : visitorLogs.length > 0;
+
+    if (!hasData) {
+      toast.warning('Nothing to Print', 'This report has no data records to print.');
+      return;
+    }
     window.print();
   };
 
@@ -113,6 +129,25 @@ export default function ReportsPage() {
 
   return (
     <AppShell>
+      {/* Print-only letterhead — invisible on screen, visible on print */}
+      <div className="print-only hidden border-b-2 border-[#141414] pb-4 mb-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[10px] uppercase font-bold tracking-widest text-[#555552]">
+              Official Institutional Document
+            </p>
+            <h1 className="text-xl font-bold text-[#141414] mt-1">{settings.schoolName}</h1>
+            <p className="text-sm text-[#555552]">{settings.campusName}</p>
+          </div>
+          <div className="text-right text-xs text-[#555552] space-y-0.5">
+            <p className="font-bold text-[#141414] text-sm">DIMS — Official Report</p>
+            <p>Academic Year: {settings.academicYear}</p>
+            <p>Generated: {formatDate(new Date().toISOString())}</p>
+            <p>Prepared by: {settings.dormitoryLeadName}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Action Header */}
       <div className="no-print flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E4E4E0] pb-5">
         <div>

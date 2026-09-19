@@ -15,8 +15,10 @@ import {
   Save,
   CheckCircle2,
   Send,
+  Download,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
+import { exportToCsv } from '@/lib/csv';
 
 type SettingsTabId = 'system' | 'brevo' | 'supabase' | 'audit';
 
@@ -37,6 +39,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(store.getSettings());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(store.getActivityLogs());
   const [activeTab, setActiveTab] = useState<SettingsTabId>('system');
+  const [auditPage, setAuditPage] = useState(1);
+  const AUDIT_PER_PAGE = 25;
 
   // Form states
   const [schoolName, setSchoolName] = useState(settings.schoolName);
@@ -53,9 +57,6 @@ export default function SettingsPage() {
   const [isTestingEmail, setIsTestingEmail] = useState(false);
 
   // Supabase
-  const [supabaseUrl, setSupabaseUrl] = useState(settings.supabaseUrl || '');
-  const [supabaseAnonKey, setSupabaseAnonKey] = useState(settings.supabaseAnonKey || '');
-
   // Save feedback
   const [saveFeedback, setSaveFeedback] = useState(false);
 
@@ -78,12 +79,22 @@ export default function SettingsPage() {
       brevoApiKey: brevoApiKey.trim() || undefined,
       brevoSenderEmail: brevoSenderEmail.trim() || undefined,
       brevoSenderName: brevoSenderName.trim() || undefined,
-      supabaseUrl: supabaseUrl.trim() || undefined,
-      supabaseAnonKey: supabaseAnonKey.trim() || undefined,
     });
 
     setSaveFeedback(true);
     setTimeout(() => setSaveFeedback(false), 3000);
+  };
+
+  const handleExportAuditLog = () => {
+    const rows = activityLogs.map((log) => ({
+      Timestamp: formatDateTime(log.createdAt),
+      Action: log.action,
+      Module: log.module,
+      Detail: log.detail,
+      Actor: log.actorName,
+      IP: log.ipAddress || 'N/A',
+    }));
+    exportToCsv('dims_immutable_audit_trail', rows);
   };
 
   const handleTestBrevoEmail = async () => {
@@ -322,7 +333,7 @@ export default function SettingsPage() {
 
       {/* Tab 3: Supabase Cloud DB */}
       {activeTab === 'supabase' && (
-        <form onSubmit={handleSaveSettings} className="minimal-card p-6 space-y-5">
+        <div className="minimal-card p-6 space-y-5">
           <div className="border-b border-[#E4E4E0] pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -331,37 +342,43 @@ export default function SettingsPage() {
                   Cloud persistence with Row Level Security (RLS) policies for ASR Staff data.
                 </p>
               </div>
-              <Badge variant={supabaseUrl ? 'success' : 'neutral'} size="sm" dot>
-                {supabaseUrl ? 'Cloud Connected' : 'Local Standalone Engine'}
+              <Badge variant={settings.supabaseConnected ? 'success' : 'neutral'} size="sm" dot>
+                {settings.supabaseConnected ? 'Cloud Connected' : 'Local Standalone Engine'}
               </Badge>
             </div>
           </div>
 
           <div className="space-y-4 max-w-xl">
-            <div>
-              <label className="block text-xs font-medium text-[#2C2C2A] mb-1">
-                Supabase Project URL
-              </label>
-              <input
-                type="text"
-                value={supabaseUrl}
-                onChange={(e) => setSupabaseUrl(e.target.value)}
-                placeholder="https://xxxxxxxx.supabase.co"
-                className="input-minimal font-mono"
-              />
+            <div className="p-4 rounded-xl bg-[#F8F8F6] border border-[#E4E4E0]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-[#141414]">Connection Status</span>
+                <Badge variant={settings.supabaseConnected ? 'success' : 'neutral'} size="sm" dot>
+                  {settings.supabaseConnected ? 'Cloud Connected' : 'Offline / Not Configured'}
+                </Badge>
+              </div>
+              <div className="space-y-2 text-xs text-[#555552]">
+                <div className="flex justify-between items-center">
+                  <span>Project URL</span>
+                  <span className="font-mono text-[11px] text-[#8C8C8A]">
+                    {settings.supabaseUrl ? settings.supabaseUrl.replace('https://', '').substring(0, 24) + '...' : 'Not set'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Public Anon Key</span>
+                  <span className="font-mono text-[11px] text-[#8C8C8A]">
+                    {settings.supabaseAnonKey ? '••••••••••••••••' + settings.supabaseAnonKey.slice(-6) : 'Not set'}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-[#2C2C2A] mb-1">
-                Supabase Anon / Public Key
-              </label>
-              <input
-                type="password"
-                value={supabaseAnonKey}
-                onChange={(e) => setSupabaseAnonKey(e.target.value)}
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                className="input-minimal font-mono"
-              />
+            <div className="p-4 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] text-xs text-[#92400E] space-y-1">
+              <p className="font-semibold flex items-center gap-1.5">
+                <span>⚠</span> Cloud credentials are managed via Vercel Environment Variables
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                To configure or update Supabase credentials, navigate to your Vercel Project Dashboard &rarr; Settings &rarr; Environment Variables and update <code className="font-mono bg-white/70 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="font-mono bg-white/70 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, then trigger a redeployment.
+              </p>
             </div>
 
             <div className="p-4 rounded-xl bg-[#F8F8F6] border border-[#E4E4E0] space-y-2">
@@ -376,64 +393,115 @@ export default function SettingsPage() {
               </p>
             </div>
           </div>
-
-          <div className="pt-4 border-t border-[#E4E4E0] flex justify-end">
-            <Button type="submit" variant="primary" className="flex items-center gap-1.5">
-              <Save className="w-4 h-4" /> Save Supabase Cloud Credentials
-            </Button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Tab 4: Immutable Audit Trail */}
       {activeTab === 'audit' && (
         <div className="minimal-card p-6 space-y-4">
-          <div className="border-b border-[#E4E4E0] pb-3 flex items-center justify-between">
+          <div className="border-b border-[#E4E4E0] pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-[#141414]">Immutable Activity Audit Trail</h3>
               <p className="text-xs text-[#8C8C8A]">
                 Cryptographically protected chronological log of all administrative actions in DIMS.
               </p>
             </div>
-            <Badge variant="default" size="sm">
-              {activityLogs.length} Records
-            </Badge>
+            <div className="flex items-center gap-2.5">
+              <Badge variant="default" size="sm">
+                {activityLogs.length} Records
+              </Badge>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleExportAuditLog}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export Audit CSV
+              </Button>
+            </div>
           </div>
 
-          <div className="border border-[#E4E4E0] rounded-xl overflow-hidden max-h-96 overflow-y-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0] sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Timestamp</th>
-                  <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Action</th>
-                  <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Module</th>
-                  <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Details</th>
-                  <th className="py-2.5 px-3 font-semibold text-[#8C8C8A] text-right">Actor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E4E4E0]">
-                {activityLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-[#F8F8F6]">
-                    <td className="py-2.5 px-3 font-mono text-[11px] text-[#8C8C8A] whitespace-nowrap">
-                      {formatDateTime(log.createdAt)}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <span className="font-mono text-[10px] font-bold uppercase bg-[#EEF2FF] text-[#4F46E5] px-1.5 py-0.5 rounded">
-                        {log.action}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 uppercase text-[10px] font-semibold text-[#555552]">
-                      {log.module}
-                    </td>
-                    <td className="py-2.5 px-3 text-[#2C2C2A]">{log.detail}</td>
-                    <td className="py-2.5 px-3 text-right font-medium text-[#141414] whitespace-nowrap">
-                      {log.actorName}
-                    </td>
+          <div className="border border-[#E4E4E0] rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0] sticky top-0">
+                  <tr>
+                    <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Timestamp</th>
+                    <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Action</th>
+                    <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Module</th>
+                    <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Details</th>
+                    <th className="py-2.5 px-3 font-semibold text-[#8C8C8A] text-right">Actor</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#E4E4E0]">
+                  {activityLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs text-[#8C8C8A]">
+                        No activity records logged yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    activityLogs
+                      .slice((auditPage - 1) * AUDIT_PER_PAGE, auditPage * AUDIT_PER_PAGE)
+                      .map((log) => (
+                        <tr key={log.id} className="hover:bg-[#F8F8F6]">
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-[#8C8C8A] whitespace-nowrap">
+                            {formatDateTime(log.createdAt)}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="font-mono text-[10px] font-bold uppercase bg-[#EEF2FF] text-[#4F46E5] px-1.5 py-0.5 rounded">
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 uppercase text-[10px] font-semibold text-[#555552]">
+                            {log.module}
+                          </td>
+                          <td className="py-2.5 px-3 text-[#2C2C2A]">{log.detail}</td>
+                          <td className="py-2.5 px-3 text-right font-medium text-[#141414] whitespace-nowrap">
+                            {log.actorName}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* Pagination Controls */}
+          {activityLogs.length > AUDIT_PER_PAGE && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-[#8C8C8A]">
+                Showing {(auditPage - 1) * AUDIT_PER_PAGE + 1}–
+                {Math.min(auditPage * AUDIT_PER_PAGE, activityLogs.length)} of {activityLogs.length} entries
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={auditPage === 1}
+                  onClick={() => setAuditPage((p) => p - 1)}
+                  className="text-xs"
+                >
+                  &larr; Prev
+                </Button>
+                <span className="text-xs font-medium text-[#555552] px-1">
+                  Page {auditPage} of {Math.ceil(activityLogs.length / AUDIT_PER_PAGE)}
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={auditPage >= Math.ceil(activityLogs.length / AUDIT_PER_PAGE)}
+                  onClick={() => setAuditPage((p) => p + 1)}
+                  className="text-xs"
+                >
+                  Next &rarr;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </AppShell>

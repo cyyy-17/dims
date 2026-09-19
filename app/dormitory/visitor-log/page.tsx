@@ -14,12 +14,16 @@ import {
   Search,
   UserCheck,
   CheckCircle2,
+  Calendar,
+  RotateCcw,
 } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 
 export default function VisitorLogPage() {
   const [logs, setLogs] = useState<VisitorLog[]>(store.getVisitorLogs());
   const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -30,13 +34,25 @@ export default function VisitorLogPage() {
   }, []);
 
   const filteredLogs = logs.filter((l) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      l.visitorName.toLowerCase().includes(q) ||
-      l.purpose.toLowerCase().includes(q) ||
-      (l.dormerVisitedName && l.dormerVisitedName.toLowerCase().includes(q))
-    );
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const match =
+        l.visitorName.toLowerCase().includes(q) ||
+        l.purpose.toLowerCase().includes(q) ||
+        (l.dormerVisitedName && l.dormerVisitedName.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (new Date(l.timeIn) < start) return false;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      if (new Date(l.timeIn) > end) return false;
+    }
+    return true;
   });
 
   const handleMarkTimeOut = (logId: string) => {
@@ -100,22 +116,59 @@ export default function VisitorLogPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-[#E4E4E0]">
-        <div className="relative w-full max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by visitor name, purpose, or resident visited..."
-            className="input-minimal pl-10!"
-          />
+      {/* Search & Date Filter Bar */}
+      <div className="p-3.5 rounded-xl bg-white border border-[#E4E4E0] space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative w-full max-w-md">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-[#8C8C8A] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by visitor name, purpose, or resident visited..."
+              className="input-minimal pl-10!"
+            />
+          </div>
+
+          <span className="text-xs text-[#8C8C8A]">
+            {filteredLogs.length} total entries recorded
+          </span>
         </div>
 
-        <span className="text-xs text-[#8C8C8A]">
-          {filteredLogs.length} total entries recorded
-        </span>
+        {/* Row 2: Date Filters */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#F0F0EE] text-xs">
+          <div className="flex items-center gap-1.5 text-[#555552] font-medium">
+            <Calendar className="w-3.5 h-3.5 text-[#8C8C8A]" />
+            <span>Visit Date From:</span>
+          </div>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="input-minimal py-1! px-2.5! text-xs w-auto"
+          />
+          <span className="text-[#8C8C8A]">To:</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="input-minimal py-1! px-2.5! text-xs w-auto"
+          />
+          {(startDate || endDate || searchQuery) && (
+            <button
+              type="button"
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+                setSearchQuery('');
+              }}
+              className="flex items-center gap-1 text-xs text-[#4F46E5] hover:text-[#4338CA] font-medium ml-auto cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset Filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Visitor Log Table */}

@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasSession = request.cookies.has('dims_staff_session');
+  const sessionCookie = request.cookies.get('dims_staff_session');
+  const hasSession = !!sessionCookie?.value && sessionCookie.value.length >= 64;
 
   // If visiting /login and already has active session, redirect to home
   if (pathname === '/login') {
