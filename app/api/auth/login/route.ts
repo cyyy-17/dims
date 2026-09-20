@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
+import { createSignedSessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,15 +57,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate cryptographically random session token (64 hex characters)
-    const token = crypto.randomBytes(32).toString('hex');
+    // Generate cryptographically signed session token (HMAC-SHA256 with timestamp)
+    const token = createSignedSessionToken(email.trim());
 
     const response = NextResponse.json({ success: true });
     // Set HttpOnly cookie — not readable by JavaScript, immune to XSS
-    response.cookies.set('dims_staff_session', token, {
+    response.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });

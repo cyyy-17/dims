@@ -79,13 +79,17 @@ export default function DashboardPage() {
       {/* Top Banner / Executive Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E4E4E0] pb-5">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-[#141414]">
               Executive Operations Dashboard
             </h1>
-            <Badge variant="default" size="sm" dot>
+            <div className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="relative flex h-2 w-2 mr-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
               Live Feed
-            </Badge>
+            </div>
           </div>
           <p className="text-xs text-[#8C8C8A] mt-1">
             ASR Field Campus Dormitory & Physical Asset Custody Control Center
@@ -98,7 +102,7 @@ export default function DashboardPage() {
             size="sm"
             variant="secondary"
             onClick={() => setIsStockModalOpen(true)}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 hover:border-[#16A34A] transition-colors"
           >
             <Package className="w-3.5 h-3.5 text-[#16A34A]" />
             Stock In / Out
@@ -108,7 +112,7 @@ export default function DashboardPage() {
             size="sm"
             variant="secondary"
             onClick={() => setIsAnnouncementModalOpen(true)}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 hover:border-[#4F46E5] transition-colors"
           >
             <Send className="w-3.5 h-3.5 text-[#4F46E5]" />
             Send Notice
@@ -118,7 +122,7 @@ export default function DashboardPage() {
             size="sm"
             variant="primary"
             onClick={() => setIsDormerModalOpen(true)}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1.5 shadow-sm hover:shadow transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             Register Dormer
@@ -126,10 +130,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards Row (Swiss Minimalist Cards) */}
+      {/* KPI Cards Row (Elevated Minimalist Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* KPI 1: Occupancy */}
-        <div className="minimal-card p-5 space-y-3">
+        <div className="minimal-card relative overflow-hidden p-5 space-y-3 hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-indigo-500 to-blue-500" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#8C8C8A]">
               Occupancy Rate
@@ -148,19 +153,20 @@ export default function DashboardPage() {
           </div>
           <div className="w-full bg-[#ECECE8] h-1.5 rounded-full overflow-hidden">
             <div
-              className="bg-[#4F46E5] h-full rounded-full transition-all duration-500"
+              className="bg-linear-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-500"
               style={{ width: `${Math.min(metrics.occupancyRate, 100)}%` }}
             />
           </div>
         </div>
 
         {/* KPI 2: Total Active Dormers */}
-        <div className="minimal-card p-5 space-y-3">
+        <div className="minimal-card relative overflow-hidden p-5 space-y-3 hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-blue-500 to-cyan-500" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#8C8C8A]">
               Active Residents
             </span>
-            <div className="w-7 h-7 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-[#F0F9FF] text-[#0284C7] flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
@@ -169,18 +175,19 @@ export default function DashboardPage() {
               {metrics.dormerDemographics.total}
             </div>
             <p className="text-[11px] text-[#8C8C8A] mt-0.5">
-              Across 3 dormer categories
+              Across 3 resident categories
             </p>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-[#555552]">
-            <span>{metrics.dormerDemographics.students} Stu</span> ·
-            <span>{metrics.dormerDemographics.employees} Emp</span> ·
-            <span>{metrics.dormerDemographics.visitors} Vis</span>
+          <div className="flex items-center gap-1.5 text-[10px] text-[#555552] font-medium">
+            <span className="text-indigo-600 font-semibold">{metrics.dormerDemographics.students} Stu</span> ·
+            <span className="text-sky-600 font-semibold">{metrics.dormerDemographics.employees} Emp</span> ·
+            <span className="text-purple-600 font-semibold">{metrics.dormerDemographics.visitors} Vis</span>
           </div>
         </div>
 
         {/* KPI 3: Rooms Count */}
-        <div className="minimal-card p-5 space-y-3">
+        <div className="minimal-card relative overflow-hidden p-5 space-y-3 hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-emerald-500 to-teal-500" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#8C8C8A]">
               Dormitory Rooms
@@ -197,7 +204,7 @@ export default function DashboardPage() {
               {metrics.roomStatusCounts.available} Available · {metrics.roomStatusCounts.full} Full
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Badge variant="success" size="sm">
               {metrics.roomStatusCounts.available} Open
             </Badge>
@@ -210,7 +217,8 @@ export default function DashboardPage() {
         </div>
 
         {/* KPI 4: Total Inventory Items */}
-        <div className="minimal-card p-5 space-y-3">
+        <div className="minimal-card relative overflow-hidden p-5 space-y-3 hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-amber-500 to-orange-500" />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#8C8C8A]">
               Physical Assets
@@ -229,14 +237,15 @@ export default function DashboardPage() {
           </div>
           <Link
             href="/inventory/items"
-            className="text-[11px] text-[#4F46E5] hover:underline flex items-center gap-1 font-medium"
+            className="text-[11px] text-[#4F46E5] hover:underline flex items-center gap-1 font-semibold group"
           >
-            View inventory catalog <ArrowUpRight className="w-3 h-3" />
+            <span>View catalog</span> <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </Link>
         </div>
 
         {/* KPI 5: Stock Attention Alerts */}
-        <div className="minimal-card p-5 space-y-3 col-span-2 lg:col-span-1">
+        <div className="minimal-card relative overflow-hidden p-5 space-y-3 col-span-2 lg:col-span-1 hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div className={`absolute top-0 left-0 right-0 h-1 ${metrics.inventoryHealth.outOfStockCount > 0 ? 'bg-linear-to-r from-red-500 to-rose-600' : metrics.inventoryHealth.lowStockCount > 0 ? 'bg-linear-to-r from-amber-500 to-yellow-500' : 'bg-linear-to-r from-emerald-500 to-teal-500'}`} />
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#8C8C8A]">
               Stock Alerts
@@ -256,11 +265,11 @@ export default function DashboardPage() {
           <div>
             {metrics.inventoryHealth.outOfStockCount > 0 ? (
               <Badge variant="danger" size="sm" dot>
-                Immediate Action Required
+                Action Required
               </Badge>
             ) : metrics.inventoryHealth.lowStockCount > 0 ? (
               <Badge variant="warning" size="sm" dot>
-                Restock Recommended
+                Restock Soon
               </Badge>
             ) : (
               <Badge variant="success" size="sm" dot>

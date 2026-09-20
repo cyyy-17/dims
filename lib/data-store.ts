@@ -50,16 +50,16 @@ const INITIAL_SETTINGS: AppSettings = {
 };
 
 const INITIAL_CATEGORIES: InventoryCategory[] = [
-  { id: 'cat-1', name: 'Furniture & Bedding', description: 'Beds, mattresses, study tables, chairs, wardrobes' },
-  { id: 'cat-2', name: 'Electronics & Appliances', description: 'Fans, desk lamps, purifiers, emergency lights' },
-  { id: 'cat-3', name: 'Safety & Medical', description: 'Fire extinguishers, first-aid kits, smoke alarms' },
-  { id: 'cat-4', name: 'Cleaning & Sanitation', description: 'Waste bins, sanitizing dispensers, mop buckets' },
-  { id: 'cat-5', name: 'Maintenance & Tools', description: 'Toolkits, spare padlocks, plumbing fittings' },
+  { id: '00000000-0000-0000-0000-000000000001', name: 'Furniture & Bedding', description: 'Beds, mattresses, study tables, chairs, wardrobes' },
+  { id: '00000000-0000-0000-0000-000000000002', name: 'Electronics & Appliances', description: 'Fans, desk lamps, purifiers, emergency lights' },
+  { id: '00000000-0000-0000-0000-000000000003', name: 'Safety & Medical', description: 'Fire extinguishers, first-aid kits, smoke alarms' },
+  { id: '00000000-0000-0000-0000-000000000004', name: 'Cleaning & Sanitation', description: 'Waste bins, sanitizing dispensers, mop buckets' },
+  { id: '00000000-0000-0000-0000-000000000005', name: 'Maintenance & Tools', description: 'Toolkits, spare padlocks, plumbing fittings' },
 ];
 
 const INITIAL_ROOMS: Room[] = [
   {
-    id: 'room-101',
+    id: '10000000-0000-0000-0000-000000000101',
     roomNumber: '101',
     floor: '1st Floor',
     wing: 'East Wing',
@@ -69,12 +69,12 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 3500,
     notes: 'Well-ventilated corner room with garden view. Includes built-in study nook.',
     bedSlots: [
-      { id: 'slot-101-a', roomId: 'room-101', slotLabel: 'Bed A', isOccupied: false },
-      { id: 'slot-101-b', roomId: 'room-101', slotLabel: 'Bed B', isOccupied: false },
+      { id: '10000000-0000-0000-0001-000000000101', roomId: '10000000-0000-0000-0000-000000000101', slotLabel: 'Bed A', isOccupied: false },
+      { id: '10000000-0000-0000-0002-000000000101', roomId: '10000000-0000-0000-0000-000000000101', slotLabel: 'Bed B', isOccupied: false },
     ],
   },
   {
-    id: 'room-102',
+    id: '10000000-0000-0000-0000-000000000102',
     roomNumber: '102',
     floor: '1st Floor',
     wing: 'East Wing',
@@ -84,12 +84,12 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 3500,
     notes: 'Near ground floor study lounge.',
     bedSlots: [
-      { id: 'slot-102-a', roomId: 'room-102', slotLabel: 'Bed A', isOccupied: false },
-      { id: 'slot-102-b', roomId: 'room-102', slotLabel: 'Bed B', isOccupied: false },
+      { id: '10000000-0000-0000-0001-000000000102', roomId: '10000000-0000-0000-0000-000000000102', slotLabel: 'Bed A', isOccupied: false },
+      { id: '10000000-0000-0000-0002-000000000102', roomId: '10000000-0000-0000-0000-000000000102', slotLabel: 'Bed B', isOccupied: false },
     ],
   },
   {
-    id: 'room-103',
+    id: '10000000-0000-0000-0000-000000000103',
     roomNumber: '103',
     floor: '1st Floor',
     wing: 'West Wing',
@@ -99,11 +99,11 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 5500,
     notes: 'Dedicated single room for senior staff or faculty.',
     bedSlots: [
-      { id: 'slot-103-a', roomId: 'room-103', slotLabel: 'Single Bed 1', isOccupied: false },
+      { id: '10000000-0000-0000-0001-000000000103', roomId: '10000000-0000-0000-0000-000000000103', slotLabel: 'Single Bed 1', isOccupied: false },
     ],
   },
   {
-    id: 'room-104',
+    id: '10000000-0000-0000-0000-000000000104',
     roomNumber: '104',
     floor: '1st Floor',
     wing: 'West Wing',
@@ -113,14 +113,14 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 2800,
     notes: 'Spacious quad room with 2 double bunks.',
     bedSlots: [
-      { id: 'slot-104-a', roomId: 'room-104', slotLabel: 'Lower Bunk 1', isOccupied: false },
-      { id: 'slot-104-b', roomId: 'room-104', slotLabel: 'Upper Bunk 1', isOccupied: false },
-      { id: 'slot-104-c', roomId: 'room-104', slotLabel: 'Lower Bunk 2', isOccupied: false },
-      { id: 'slot-104-d', roomId: 'room-104', slotLabel: 'Upper Bunk 2', isOccupied: false },
+      { id: '10000000-0000-0000-0001-000000000104', roomId: '10000000-0000-0000-0000-000000000104', slotLabel: 'Lower Bunk 1', isOccupied: false },
+      { id: '10000000-0000-0000-0002-000000000104', roomId: '10000000-0000-0000-0000-000000000104', slotLabel: 'Upper Bunk 1', isOccupied: false },
+      { id: '10000000-0000-0000-0003-000000000104', roomId: '10000000-0000-0000-0000-000000000104', slotLabel: 'Lower Bunk 2', isOccupied: false },
+      { id: '10000000-0000-0000-0004-000000000104', roomId: '10000000-0000-0000-0000-000000000104', slotLabel: 'Upper Bunk 2', isOccupied: false },
     ],
   },
   {
-    id: 'room-105',
+    id: '10000000-0000-0000-0000-000000000105',
     roomNumber: '105',
     floor: '1st Floor',
     wing: 'North Wing',
@@ -130,12 +130,12 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 3500,
     notes: 'Newly repainted, ready for occupancy.',
     bedSlots: [
-      { id: 'slot-105-a', roomId: 'room-105', slotLabel: 'Bed A', isOccupied: false },
-      { id: 'slot-105-b', roomId: 'room-105', slotLabel: 'Bed B', isOccupied: false },
+      { id: '10000000-0000-0000-0001-000000000105', roomId: '10000000-0000-0000-0000-000000000105', slotLabel: 'Bed A', isOccupied: false },
+      { id: '10000000-0000-0000-0002-000000000105', roomId: '10000000-0000-0000-0000-000000000105', slotLabel: 'Bed B', isOccupied: false },
     ],
   },
   {
-    id: 'room-201',
+    id: '20000000-0000-0000-0000-000000000201',
     roomNumber: '201',
     floor: '2nd Floor',
     wing: 'East Wing',
@@ -145,12 +145,12 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 3800,
     notes: 'Balcony access overlooking the central courtyard.',
     bedSlots: [
-      { id: 'slot-201-a', roomId: 'room-201', slotLabel: 'Bed A', isOccupied: false },
-      { id: 'slot-201-b', roomId: 'room-201', slotLabel: 'Bed B', isOccupied: false },
+      { id: '20000000-0000-0000-0001-000000000201', roomId: '20000000-0000-0000-0000-000000000201', slotLabel: 'Bed A', isOccupied: false },
+      { id: '20000000-0000-0000-0002-000000000201', roomId: '20000000-0000-0000-0000-000000000201', slotLabel: 'Bed B', isOccupied: false },
     ],
   },
   {
-    id: 'room-202',
+    id: '20000000-0000-0000-0000-000000000202',
     roomNumber: '202',
     floor: '2nd Floor',
     wing: 'East Wing',
@@ -160,12 +160,12 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 7000,
     notes: 'Executive suite with private en-suite bathroom, dedicated for official guests & visitors.',
     bedSlots: [
-      { id: 'slot-202-a', roomId: 'room-202', slotLabel: 'Suite Bed 1', isOccupied: false },
-      { id: 'slot-202-b', roomId: 'room-202', slotLabel: 'Suite Bed 2', isOccupied: false },
+      { id: '20000000-0000-0000-0001-000000000202', roomId: '20000000-0000-0000-0000-000000000202', slotLabel: 'Suite Bed 1', isOccupied: false },
+      { id: '20000000-0000-0000-0002-000000000202', roomId: '20000000-0000-0000-0000-000000000202', slotLabel: 'Suite Bed 2', isOccupied: false },
     ],
   },
   {
-    id: 'room-203',
+    id: '20000000-0000-0000-0000-000000000203',
     roomNumber: '203',
     floor: '2nd Floor',
     wing: 'West Wing',
@@ -175,11 +175,11 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 5500,
     notes: 'Standard single room.',
     bedSlots: [
-      { id: 'slot-203-a', roomId: 'room-203', slotLabel: 'Single Bed', isOccupied: false },
+      { id: '20000000-0000-0000-0001-000000000203', roomId: '20000000-0000-0000-0000-000000000203', slotLabel: 'Single Bed', isOccupied: false },
     ],
   },
   {
-    id: 'room-204',
+    id: '20000000-0000-0000-0000-000000000204',
     roomNumber: '204',
     floor: '2nd Floor',
     wing: 'West Wing',
@@ -189,14 +189,14 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 3000,
     notes: '2nd floor quad room with air conditioning unit.',
     bedSlots: [
-      { id: 'slot-204-a', roomId: 'room-204', slotLabel: 'Lower Bed A', isOccupied: false },
-      { id: 'slot-204-b', roomId: 'room-204', slotLabel: 'Upper Bed A', isOccupied: false },
-      { id: 'slot-204-c', roomId: 'room-204', slotLabel: 'Lower Bed B', isOccupied: false },
-      { id: 'slot-204-d', roomId: 'room-204', slotLabel: 'Upper Bed B', isOccupied: false },
+      { id: '20000000-0000-0000-0001-000000000204', roomId: '20000000-0000-0000-0000-000000000204', slotLabel: 'Lower Bed A', isOccupied: false },
+      { id: '20000000-0000-0000-0002-000000000204', roomId: '20000000-0000-0000-0000-000000000204', slotLabel: 'Upper Bed A', isOccupied: false },
+      { id: '20000000-0000-0000-0003-000000000204', roomId: '20000000-0000-0000-0000-000000000204', slotLabel: 'Lower Bed B', isOccupied: false },
+      { id: '20000000-0000-0000-0004-000000000204', roomId: '20000000-0000-0000-0000-000000000204', slotLabel: 'Upper Bed B', isOccupied: false },
     ],
   },
   {
-    id: 'room-205',
+    id: '20000000-0000-0000-0000-000000000205',
     roomNumber: '205',
     floor: '2nd Floor',
     wing: 'North Wing',
@@ -206,14 +206,111 @@ const INITIAL_ROOMS: Room[] = [
     monthlyRate: 3800,
     notes: 'Fully furnished, pristine condition.',
     bedSlots: [
-      { id: 'slot-205-a', roomId: 'room-205', slotLabel: 'Bed A', isOccupied: false },
-      { id: 'slot-205-b', roomId: 'room-205', slotLabel: 'Bed B', isOccupied: false },
+      { id: '20000000-0000-0000-0001-000000000205', roomId: '20000000-0000-0000-0000-000000000205', slotLabel: 'Bed A', isOccupied: false },
+      { id: '20000000-0000-0000-0002-000000000205', roomId: '20000000-0000-0000-0000-000000000205', slotLabel: 'Bed B', isOccupied: false },
     ],
   },
 ];
 
 const INITIAL_DORMERS: Dormer[] = [];
-const INITIAL_ITEMS: InventoryItem[] = [];
+const INITIAL_ITEMS: InventoryItem[] = [
+  {
+    id: '30000000-0000-0000-0000-000000000001',
+    categoryId: '00000000-0000-0000-0000-000000000001',
+    categoryName: 'Furniture & Bedding',
+    itemCode: 'ASR-FURN-001',
+    name: 'Single Orthopedic Foam Mattress (36x75)',
+    description: 'High-density foam with water-resistant antimicrobial cover',
+    unit: 'pcs',
+    minStock: 5,
+    currentStock: 18,
+    location: 'Central Storage Room 100',
+    qrCodeData: 'DIMS:ITEM:ASR-FURN-001',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000002',
+    categoryId: '00000000-0000-0000-0000-000000000001',
+    categoryName: 'Furniture & Bedding',
+    itemCode: 'ASR-FURN-002',
+    name: 'Ergonomic Wooden Study Desk Chair',
+    description: 'Solid mahogany finish with lumbar back support',
+    unit: 'pcs',
+    minStock: 4,
+    currentStock: 12,
+    location: 'Central Storage Room 100',
+    qrCodeData: 'DIMS:ITEM:ASR-FURN-002',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000003',
+    categoryId: '00000000-0000-0000-0000-000000000001',
+    categoryName: 'Furniture & Bedding',
+    itemCode: 'ASR-FURN-003',
+    name: 'Steel 2-Door Lockable Wardrobe Locker',
+    description: 'Heavy-gauge steel with dual padlock hasps',
+    unit: 'units',
+    minStock: 2,
+    currentStock: 8,
+    location: 'West Wing Storage Bay',
+    qrCodeData: 'DIMS:ITEM:ASR-FURN-003',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000004',
+    categoryId: '00000000-0000-0000-0000-000000000002',
+    categoryName: 'Electronics & Appliances',
+    itemCode: 'ASR-ELEC-001',
+    name: '16-inch Oscillating Wall Fan',
+    description: '3-speed rotary wall-mount fan with safety grill',
+    unit: 'units',
+    minStock: 4,
+    currentStock: 3,
+    location: 'Electrical Supply Depot',
+    qrCodeData: 'DIMS:ITEM:ASR-ELEC-001',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000005',
+    categoryId: '00000000-0000-0000-0000-000000000002',
+    categoryName: 'Electronics & Appliances',
+    itemCode: 'ASR-ELEC-002',
+    name: 'Emergency Rechargeable LED Lantern',
+    description: 'Dual-tube 24-hour backup emergency light',
+    unit: 'units',
+    minStock: 5,
+    currentStock: 14,
+    location: 'Safety Storage Locker',
+    qrCodeData: 'DIMS:ITEM:ASR-ELEC-002',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: '30000000-0000-0000-0000-000000000006',
+    categoryId: '00000000-0000-0000-0000-000000000003',
+    categoryName: 'Safety & Medical',
+    itemCode: 'ASR-SAFE-001',
+    name: '10 lbs ABC Dry Chemical Fire Extinguisher',
+    description: 'Bureau of Fire Protection certified multipurpose extinguisher',
+    unit: 'units',
+    minStock: 3,
+    currentStock: 7,
+    location: 'Corridor Safety Alcove',
+    qrCodeData: 'DIMS:ITEM:ASR-SAFE-001',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 const INITIAL_ROOM_INVENTORY: RoomInventoryItem[] = [];
 const INITIAL_TRANSACTIONS: StockTransaction[] = [];
 const INITIAL_VISITOR_LOGS: VisitorLog[] = [];
@@ -234,7 +331,16 @@ class DataStore {
         localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(defaultValue));
         return defaultValue;
       }
-      return JSON.parse(stored);
+      let parsed = JSON.parse(stored);
+      // Migrate legacy non-UUID rooms or categories if present
+      if (key === 'rooms' && Array.isArray(parsed) && parsed.some((r: any) => !isUUID(r.id))) {
+        parsed = defaultValue;
+        localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(defaultValue));
+      } else if (key === 'categories' && Array.isArray(parsed) && parsed.some((c: any) => !isUUID(c.id))) {
+        parsed = defaultValue;
+        localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(defaultValue));
+      }
+      return parsed;
     } catch {
       return defaultValue;
     }
@@ -447,6 +553,8 @@ class DataStore {
     assignments?: any[];
     categories?: any[];
     items?: any[];
+    stockTransactions?: any[];
+    roomInventory?: any[];
     visitorLogs?: any[];
     announcements?: any[];
     activityLogs?: any[];
@@ -595,6 +703,45 @@ class DataStore {
       this.setItem('announcements', mappedAnnouncements);
     }
 
+    if (data.stockTransactions && data.stockTransactions.length > 0) {
+      const mappedTx: StockTransaction[] = data.stockTransactions.map((tx: any) => ({
+        id: tx.id,
+        itemId: tx.item_id,
+        itemCode: tx.item_code || '',
+        itemName: tx.item_name || '',
+        type: tx.type,
+        quantity: tx.quantity,
+        referenceNo: tx.reference_no,
+        supplier: tx.supplier,
+        purpose: tx.purpose,
+        issuedTo: tx.issued_to,
+        dormerId: tx.dormer_id,
+        roomId: tx.room_id,
+        condition: tx.condition || 'good',
+        notes: tx.notes,
+        performedBy: 'ASR Custodian',
+        createdAt: tx.created_at,
+      }));
+      this.setItem('transactions', mappedTx);
+    }
+
+    if (data.roomInventory && data.roomInventory.length > 0) {
+      const mappedRi: RoomInventoryItem[] = data.roomInventory.map((ri: any) => ({
+        id: ri.id,
+        roomId: ri.room_id,
+        roomNumber: ri.room_number || '',
+        itemId: ri.item_id,
+        itemName: ri.item_name || '',
+        itemCode: ri.item_code || '',
+        quantity: ri.quantity,
+        condition: ri.condition || 'good',
+        assignedAt: ri.assigned_at,
+        assignedBy: 'ASR Custodian',
+        returnedAt: ri.returned_at,
+      }));
+      this.setItem('room_inventory', mappedRi);
+    }
+
     if (data.activityLogs && data.activityLogs.length > 0) {
       const mappedLogs: ActivityLog[] = data.activityLogs.map((l: any) => ({
         id: l.id,
@@ -654,6 +801,8 @@ class DataStore {
         supabase.from('room_assignments').select('*').eq('is_current', true),
         supabase.from('categories').select('*'),
         supabase.from('items').select('*'),
+        supabase.from('stock_transactions').select('*').order('created_at', { ascending: false }).limit(500),
+        supabase.from('room_inventory').select('*'),
         supabase.from('visitor_logs').select('*').order('created_at', { ascending: false }),
         supabase.from('announcements').select('*').order('created_at', { ascending: false }),
         supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(500),
@@ -670,6 +819,8 @@ class DataStore {
         { data: assignments },
         { data: categories },
         { data: items },
+        { data: stockTransactions },
+        { data: roomInventory },
         { data: visitorLogs },
         { data: announcements },
         { data: activityLogs },
@@ -682,6 +833,8 @@ class DataStore {
         assignments: assignments || undefined,
         categories: categories || undefined,
         items: items || undefined,
+        stockTransactions: stockTransactions || undefined,
+        roomInventory: roomInventory || undefined,
         visitorLogs: visitorLogs || undefined,
         announcements: announcements || undefined,
         activityLogs: activityLogs || undefined,
@@ -754,6 +907,15 @@ class DataStore {
     });
   }
 
+  public getRoomById(id: string): Room | undefined {
+    return this.getRooms().find((r) => r.id === id);
+  }
+
+  public getBedSlots(roomId: string): BedSlot[] {
+    const room = this.getRooms().find((r) => r.id === roomId);
+    return room?.bedSlots || [];
+  }
+
   public addRoom(roomData: Omit<Room, 'id' | 'bedSlots'>): Room {
     const rooms = this.getRooms();
     const newId = generateUUID();
@@ -808,6 +970,57 @@ class DataStore {
     const rooms = this.getRooms();
     const idx = rooms.findIndex((r) => r.id === id);
     if (idx !== -1) {
+      const currentSlots = rooms[idx].bedSlots ? [...rooms[idx].bedSlots] : [];
+
+      // Reconcile bed slots if capacity changes
+      if (updates.capacity !== undefined && updates.capacity !== rooms[idx].capacity) {
+        const targetCap = Number(updates.capacity);
+        if (targetCap > currentSlots.length) {
+          // Generate additional bed slots
+          for (let i = currentSlots.length; i < targetCap; i++) {
+            const char = String.fromCharCode(65 + i);
+            const newSlot: BedSlot = {
+              id: generateUUID(),
+              roomId: id,
+              slotLabel: `Bed ${char}`,
+              isOccupied: false,
+            };
+            currentSlots.push(newSlot);
+            this.dispatchMutation('INSERT', 'bed_slots', {
+              id: newSlot.id,
+              room_id: id,
+              slot_label: newSlot.slotLabel,
+              is_occupied: false,
+            });
+          }
+          updates.bedSlots = currentSlots;
+        } else if (targetCap < currentSlots.length) {
+          const occupiedCount = currentSlots.filter((s) => s.isOccupied).length;
+          if (occupiedCount > targetCap) {
+            toast.warning(
+              'Capacity Limit Notice',
+              `Cannot reduce capacity below ${occupiedCount} active occupants. Please transfer or check out residents first.`
+            );
+            updates.capacity = currentSlots.length;
+          } else {
+            // Safely remove only unoccupied slots from the end
+            const slotsToKeep: BedSlot[] = [];
+            const slotsToRemove: BedSlot[] = [];
+            for (const slot of currentSlots) {
+              if (slot.isOccupied || slotsToKeep.length < targetCap) {
+                slotsToKeep.push(slot);
+              } else {
+                slotsToRemove.push(slot);
+              }
+            }
+            updates.bedSlots = slotsToKeep;
+            for (const rmSlot of slotsToRemove) {
+              this.dispatchMutation('DELETE', 'bed_slots', { id: rmSlot.id });
+            }
+          }
+        }
+      }
+
       rooms[idx] = { ...rooms[idx], ...updates };
       this.setItem('rooms', rooms);
       this.logActivity('UPDATE_ROOM', 'dormitory', `Updated Room ${rooms[idx].roomNumber} parameters.`);
@@ -850,6 +1063,10 @@ class DataStore {
   // ─────────────────────────────────────────────────────────────
   public getDormers(): Dormer[] {
     return this.getItem<Dormer[]>('dormers', INITIAL_DORMERS);
+  }
+
+  public getDormerById(id: string): Dormer | undefined {
+    return this.getDormers().find((d) => d.id === id);
   }
 
   public addDormer(dormerData: Omit<Dormer, 'id' | 'createdAt' | 'updatedAt'>): Dormer {
@@ -1035,7 +1252,12 @@ class DataStore {
   }
 
   // --- ROOM ASSIGNMENT / CHECK-IN / CHECKOUT ---
-  public assignDormerToBed(dormerId: string, roomId: string, bedSlotId: string): boolean {
+  public assignDormerToBed(
+    dormerId: string,
+    roomId: string,
+    bedSlotId: string,
+    skipSyncMutation: boolean = false
+  ): boolean {
     const dormers = this.getDormers();
     const rooms = this.getRooms();
 
@@ -1077,13 +1299,15 @@ class DataStore {
     dormer.status = 'active';
     this.setItem('dormers', dormers);
 
-    // Sync atomic assignment via server handler
-    this.dispatchMutation('ASSIGN_BED', 'room_assignments', {
-      dormerId: dormer.id,
-      roomId: room.id,
-      bedSlotId: slot.id,
-      checkInDate,
-    });
+    // Sync atomic assignment via server handler if not part of a transfer
+    if (!skipSyncMutation) {
+      this.dispatchMutation('ASSIGN_BED', 'room_assignments', {
+        dormerId: dormer.id,
+        roomId: room.id,
+        bedSlotId: slot.id,
+        checkInDate,
+      });
+    }
 
     this.logActivity(
       'CHECK_IN',
@@ -1128,7 +1352,8 @@ class DataStore {
     const oldRoomNumber = dormer.currentAssignment?.roomNumber || 'None';
     const oldBedSlotId = dormer.currentAssignment?.bedSlotId;
 
-    const success = this.assignDormerToBed(dormerId, newRoomId, newBedSlotId);
+    // Call assignDormerToBed with skipSyncMutation = true to prevent duplicate assignment insertion
+    const success = this.assignDormerToBed(dormerId, newRoomId, newBedSlotId, true);
     if (success) {
       this.dispatchMutation('TRANSFER_BED', 'room_assignments', {
         dormerId,
@@ -1175,6 +1400,10 @@ class DataStore {
 
   public getItems(): InventoryItem[] {
     return this.getItem<InventoryItem[]>('items', INITIAL_ITEMS);
+  }
+
+  public getItemById(id: string): InventoryItem | undefined {
+    return this.getItems().find((i) => i.id === id);
   }
 
   public async addInventoryItem(itemData: Omit<InventoryItem, 'id' | 'qrCodeData' | 'createdAt' | 'updatedAt'>): Promise<InventoryItem> {
@@ -1323,15 +1552,32 @@ class DataStore {
     transactions.unshift(tx);
     this.setItem('transactions', transactions);
 
-    // If issued to a room, also track in room inventory
+    // If issued to a room, also track in room inventory (deductInventory = false since already deducted above)
     if (params.type === 'out' && params.roomId && roomNumber) {
-      this.assignItemToRoom(params.roomId, roomNumber, item.id, item.name, item.itemCode, params.quantity, params.condition || 'good');
+      this.assignItemToRoom(params.roomId, roomNumber, item.id, item.name, item.itemCode, params.quantity, params.condition || 'good', false);
     }
 
     // Sync item stock change to cloud
     this.dispatchMutation('UPDATE', 'items', {
       id: item.id,
       data: { current_stock: item.currentStock },
+    });
+
+    // Sync stock transaction record to cloud
+    this.dispatchMutation('INSERT', 'stock_transactions', {
+      id: tx.id,
+      item_id: tx.itemId,
+      type: tx.type,
+      quantity: tx.quantity,
+      reference_no: tx.referenceNo,
+      supplier: tx.supplier,
+      purpose: tx.purpose,
+      issued_to: tx.issuedTo,
+      dormer_id: tx.dormerId,
+      room_id: tx.roomId,
+      condition: tx.condition,
+      notes: tx.notes,
+      created_at: tx.createdAt,
     });
 
     this.logActivity(
@@ -1355,15 +1601,21 @@ class DataStore {
     itemName: string,
     itemCode: string,
     quantity: number,
-    condition: ItemCondition = 'good'
+    condition: ItemCondition = 'good',
+    deductInventory: boolean = true
   ): void {
     const list = this.getRoomInventory();
     const existing = list.find((ri) => ri.roomId === roomId && ri.itemId === itemId && !ri.returnedAt);
 
     if (existing) {
       existing.quantity += quantity;
+      existing.condition = condition;
+      this.dispatchMutation('UPDATE', 'room_inventory', {
+        id: existing.id,
+        data: { quantity: existing.quantity, condition },
+      });
     } else {
-      list.unshift({
+      const newEntry: RoomInventoryItem = {
         id: generateUUID(),
         roomId,
         roomNumber,
@@ -1374,10 +1626,33 @@ class DataStore {
         condition,
         assignedAt: new Date().toISOString().split('T')[0],
         assignedBy: this.getCurrentUser().fullName,
+      };
+      list.unshift(newEntry);
+      this.dispatchMutation('INSERT', 'room_inventory', {
+        id: newEntry.id,
+        room_id: roomId,
+        item_id: itemId,
+        quantity,
+        condition,
+        assigned_at: newEntry.assignedAt,
       });
     }
 
     this.setItem('room_inventory', list);
+
+    // If assigned directly (outside stock-out modal), deduct item inventory stock
+    if (deductInventory) {
+      const items = this.getItems();
+      const item = items.find((i) => i.id === itemId);
+      if (item) {
+        item.currentStock = Math.max(0, item.currentStock - quantity);
+        this.setItem('items', items);
+        this.dispatchMutation('UPDATE', 'items', {
+          id: item.id,
+          data: { current_stock: item.currentStock },
+        });
+      }
+    }
   }
 
   public returnItemFromRoom(roomInventoryId: string, returnQty: number, condition: ItemCondition): boolean {
@@ -1392,13 +1667,21 @@ class DataStore {
 
     if (returnQty === itemEntry.quantity) {
       itemEntry.returnedAt = new Date().toISOString();
+      this.dispatchMutation('UPDATE', 'room_inventory', {
+        id: itemEntry.id,
+        data: { returned_at: itemEntry.returnedAt, condition },
+      });
     } else {
       itemEntry.quantity -= returnQty;
+      this.dispatchMutation('UPDATE', 'room_inventory', {
+        id: itemEntry.id,
+        data: { quantity: itemEntry.quantity },
+      });
     }
 
     this.setItem('room_inventory', list);
 
-    // Put back into inventory stock
+    // Put back into inventory stock via official stock return ledger
     this.recordStockTransaction({
       itemId: itemEntry.itemId,
       type: 'return',

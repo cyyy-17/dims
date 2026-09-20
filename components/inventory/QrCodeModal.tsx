@@ -29,13 +29,20 @@ const QrCodeContent: React.FC<{
   }, [item.qrCodeData]);
 
   const handlePrintTag = () => {
+    document.body.classList.add('printing-tag');
+    const cleanup = () => {
+      document.body.classList.remove('printing-tag');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
     window.print();
+    setTimeout(cleanup, 1200);
   };
 
   return (
     <div className="space-y-6 text-center">
       {/* Printable Asset Tag Box */}
-      <div className="p-6 rounded-2xl border-2 border-[#141414] bg-white shadow-sm inline-block mx-auto max-w-70">
+      <div className="printable-property-tag p-6 rounded-2xl border-2 border-[#141414] bg-white shadow-sm inline-block mx-auto max-w-70">
         {/* Header */}
         <div className="border-b border-[#E4E4E0] pb-2 mb-3">
           <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-[#4F46E5] uppercase tracking-wider">

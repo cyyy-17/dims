@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionCookie = request.cookies.get('dims_staff_session');
-  const hasSession = !!sessionCookie?.value && sessionCookie.value.length >= 64;
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+  const session = verifySessionToken(sessionCookie?.value);
+  const hasSession = session.valid;
 
   // If visiting /login and already has active session, redirect to home
   if (pathname === '/login') {
@@ -17,7 +19,12 @@ export function proxy(request: NextRequest) {
   // Protect all internal application routes
   if (!hasSession) {
     const loginUrl = new URL('/login', request.url);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    // If cookie was present but invalid/expired, clear it
+    if (sessionCookie?.value) {
+      response.cookies.delete(SESSION_COOKIE_NAME);
+    }
+    return response;
   }
 
   return NextResponse.next();

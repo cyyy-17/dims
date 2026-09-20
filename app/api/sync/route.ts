@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 // Server-side Supabase admin client using Service Role Key
 function getAdminSupabase() {
@@ -17,6 +18,21 @@ function getAdminSupabase() {
   });
 }
 
+const ALLOWED_SYNC_TABLES = new Set([
+  'rooms',
+  'bed_slots',
+  'dormers',
+  'room_assignments',
+  'categories',
+  'items',
+  'stock_transactions',
+  'room_inventory',
+  'visitor_logs',
+  'announcements',
+  'announcement_recipients',
+  'activity_logs',
+]);
+
 export interface SyncMutation {
   action: 'INSERT' | 'UPDATE' | 'DELETE' | 'UPSERT' | 'ASSIGN_BED' | 'CHECKOUT_DORMER' | 'TRANSFER_BED';
   table: string;
@@ -24,11 +40,12 @@ export interface SyncMutation {
 }
 
 export async function POST(request: NextRequest) {
-  // 1. Session verification
-  const sessionCookie = request.cookies.get('dims_staff_session');
-  if (!sessionCookie?.value || (sessionCookie.value !== '1' && sessionCookie.value.length < 32)) {
+  // 1. Session verification with cryptographic HMAC signature
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+  const session = verifySessionToken(sessionCookie?.value);
+  if (!session.valid) {
     return NextResponse.json(
-      { success: false, error: 'Unauthorized: Staff session required.' },
+      { success: false, error: 'Unauthorized: Valid staff session required.' },
       { status: 401 }
     );
   }
@@ -53,7 +70,7 @@ export async function POST(request: NextRequest) {
       const { action, table, payload } = mutation;
 
       if (action === 'CHECKOUT_DORMER') {
-        const { dormerId, roomId, bedSlotId } = payload;
+        const { dormerId, bedSlotId } = payload;
         // 1. Deactivate room assignment
         if (dormerId) {
           await supabase
@@ -135,18 +152,31 @@ export async function POST(request: NextRequest) {
         await supabase.from('bed_slots').update({ is_occupied: true }).eq('id', newBedSlotId);
 
         results.push({ action, success: true });
-      } else if (action === 'INSERT') {
-        const { error } = await supabase.from(table).insert(payload);
-        results.push({ action, table, success: !error, error: error?.message });
-      } else if (action === 'UPSERT') {
-        const { error } = await supabase.from(table).upsert(payload);
-        results.push({ action, table, success: !error, error: error?.message });
-      } else if (action === 'UPDATE') {
-        const { error } = await supabase.from(table).update(payload.data).eq('id', payload.id);
-        results.push({ action, table, success: !error, error: error?.message });
-      } else if (action === 'DELETE') {
-        const { error } = await supabase.from(table).delete().eq('id', payload.id);
-        results.push({ action, table, success: !error, error: error?.message });
+      } else if (['INSERT', 'UPSERT', 'UPDATE', 'DELETE'].includes(action)) {
+        // Table whitelist check
+        if (!ALLOWED_SYNC_TABLES.has(table)) {
+          results.push({
+            action,
+            table,
+            success: false,
+            error: `Table '${table}' is not permitted for synchronization.`,
+          });
+          continue;
+        }
+
+        if (action === 'INSERT') {
+          const { error } = await supabase.from(table).insert(payload);
+          results.push({ action, table, success: !error, error: error?.message });
+        } else if (action === 'UPSERT') {
+          const { error } = await supabase.from(table).upsert(payload);
+          results.push({ action, table, success: !error, error: error?.message });
+        } else if (action === 'UPDATE') {
+          const { error } = await supabase.from(table).update(payload.data).eq('id', payload.id);
+          results.push({ action, table, success: !error, error: error?.message });
+        } else if (action === 'DELETE') {
+          const { error } = await supabase.from(table).delete().eq('id', payload.id);
+          results.push({ action, table, success: !error, error: error?.message });
+        }
       }
     }
 
@@ -158,11 +188,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Session verification
-  const sessionCookie = request.cookies.get('dims_staff_session');
-  if (!sessionCookie?.value || (sessionCookie.value !== '1' && sessionCookie.value.length < 32)) {
+  // Session verification with cryptographic HMAC signature
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+  const session = verifySessionToken(sessionCookie?.value);
+  if (!session.valid) {
     return NextResponse.json(
-      { success: false, error: 'Unauthorized: Staff session required.' },
+      { success: false, error: 'Unauthorized: Valid staff session required.' },
       { status: 401 }
     );
   }
@@ -183,6 +214,8 @@ export async function GET(request: NextRequest) {
       { data: assignments },
       { data: categories },
       { data: items },
+      { data: stockTransactions },
+      { data: roomInventory },
       { data: visitorLogs },
       { data: announcements },
       { data: activityLogs },
@@ -193,6 +226,8 @@ export async function GET(request: NextRequest) {
       supabase.from('room_assignments').select('*').eq('is_current', true),
       supabase.from('categories').select('*'),
       supabase.from('items').select('*'),
+      supabase.from('stock_transactions').select('*').order('created_at', { ascending: false }).limit(1000),
+      supabase.from('room_inventory').select('*'),
       supabase.from('visitor_logs').select('*').order('created_at', { ascending: false }),
       supabase.from('announcements').select('*').order('created_at', { ascending: false }),
       supabase.from('activity_logs').select('*').order('created_at', { ascending: false }).limit(500),
@@ -207,6 +242,8 @@ export async function GET(request: NextRequest) {
         assignments: assignments || [],
         categories: categories || [],
         items: items || [],
+        stockTransactions: stockTransactions || [],
+        roomInventory: roomInventory || [],
         visitorLogs: visitorLogs || [],
         announcements: announcements || [],
         activityLogs: activityLogs || [],

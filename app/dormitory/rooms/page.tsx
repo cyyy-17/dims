@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { store } from '@/lib/data-store';
 import { Room, RoomStatus } from '@/lib/types';
@@ -11,16 +12,18 @@ import {
   Plus,
   Filter,
   Search,
-  User,
   Package,
   Edit2,
   Trash2,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 
-export default function RoomsPage() {
+function RoomsContent() {
+  const searchParams = useSearchParams();
+  const queryRoomId = searchParams.get('roomId');
+
   const [rooms, setRooms] = useState<Room[]>(store.getRooms());
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterFloor, setFilterFloor] = useState<string>('all');
@@ -28,6 +31,7 @@ export default function RoomsPage() {
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState<Room | null>(null);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [highlightRoomId, setHighlightRoomId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = store.subscribe(() => {
@@ -35,6 +39,19 @@ export default function RoomsPage() {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (queryRoomId) {
+      const timer = setTimeout(() => {
+        setHighlightRoomId(queryRoomId);
+        const el = document.getElementById(`room-card-${queryRoomId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [queryRoomId]);
 
   const filteredRooms = rooms.filter((r) => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
@@ -166,7 +183,11 @@ export default function RoomsPage() {
           return (
             <div
               key={room.id}
-              className="minimal-card p-5 space-y-4 flex flex-col justify-between minimal-card-hover"
+              id={`room-card-${room.id}`}
+              className={cn(
+                "minimal-card p-5 space-y-4 flex flex-col justify-between minimal-card-hover transition-all duration-300",
+                highlightRoomId === room.id && "ring-2 ring-[#4F46E5] ring-offset-2 bg-[#F5F7FF] shadow-lg"
+              )}
             >
               {/* Card Header */}
               <div>
@@ -205,12 +226,17 @@ export default function RoomsPage() {
                   </div>
                 </div>
 
-                {/* Bed Slots Listing */}
+                {/* Visual Bed Pods */}
                 <div className="mt-4 space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8C8C8A]">
-                    Bed Allocation
-                  </p>
-                  <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#8C8C8A]">
+                      Bed Allocation Pods
+                    </p>
+                    <span className="text-[10px] text-[#8C8C8A] font-mono">
+                      {occupants.length} Occupied · {room.capacity - occupants.length} Vacant
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {room.bedSlots.map((slot) => {
                       const occupant = occupants.find(
                         (o) => o.slotLabel === slot.slotLabel || o.dormerId === slot.currentDormerId
@@ -219,17 +245,42 @@ export default function RoomsPage() {
                       return (
                         <div
                           key={slot.id}
-                          className="flex items-center justify-between p-2 rounded-lg bg-[#F8F8F6] border border-[#E4E4E0] text-xs"
+                          className={cn(
+                            "p-2.5 rounded-lg border text-xs transition-all flex flex-col justify-between gap-1.5",
+                            occupant
+                              ? "bg-[#F5F7FF] border-[#C7D2FE] shadow-xs"
+                              : "bg-[#F0FDF4]/60 border-[#BBF7D0] border-dashed"
+                          )}
                         >
-                          <span className="font-medium text-[#2C2C2A]">{slot.slotLabel}</span>
-                          {occupant ? (
-                            <span className="font-semibold text-[#4F46E5] flex items-center gap-1 truncate max-w-35">
-                              <User className="w-3 h-3 shrink-0" />
-                              <span className="truncate">{occupant.fullName}</span>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-[#141414] text-[11px] flex items-center gap-1.5">
+                              <span className={cn("w-1.5 h-1.5 rounded-full", occupant ? "bg-[#4F46E5]" : "bg-[#16A34A]")} />
+                              {slot.slotLabel}
                             </span>
+                            <span
+                              className={cn(
+                                "text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded",
+                                occupant
+                                  ? "bg-[#EEF2FF] text-[#4F46E5]"
+                                  : "bg-[#DCFCE7] text-[#16A34A]"
+                              )}
+                            >
+                              {occupant ? 'Occupied' : 'Available'}
+                            </span>
+                          </div>
+
+                          {occupant ? (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="w-5 h-5 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                {occupant.fullName.charAt(0)}
+                              </div>
+                              <span className="truncate font-semibold text-[#141414] text-xs" title={occupant.fullName}>
+                                {occupant.fullName}
+                              </span>
+                            </div>
                           ) : (
-                            <span className="text-[11px] text-[#16A34A] font-medium">
-                              Empty / Available
+                            <span className="text-[11px] text-[#16A34A] font-medium flex items-center gap-1">
+                              <span>Ready for intake</span>
                             </span>
                           )}
                         </div>
@@ -301,5 +352,13 @@ export default function RoomsPage() {
         onClose={() => setRoomToDelete(null)}
       />
     </AppShell>
+  );
+}
+
+export default function RoomsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-[#8C8C8A]">Loading rooms and allocations...</div>}>
+      <RoomsContent />
+    </Suspense>
   );
 }

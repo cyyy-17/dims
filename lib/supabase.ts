@@ -1,13 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const defaultSupabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const defaultSupabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const defaultSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const defaultSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-let cachedClient: any = null;
+let cachedClient: SupabaseClient | null = null;
+let cachedKey: string = '';
 
-export function getSupabaseClient(): any {
+export function isSupabaseConfigured(): boolean {
   let url = defaultSupabaseUrl;
   let key = defaultSupabaseAnonKey;
 
@@ -18,7 +17,36 @@ export function getSupabaseClient(): any {
     if (customKey && !customKey.includes('placeholder')) key = customKey;
   }
 
-  if (!cachedClient) {
+  return Boolean(
+    url &&
+      key &&
+      !url.includes('placeholder') &&
+      !key.includes('placeholder') &&
+      url.startsWith('https://')
+  );
+}
+
+export function getSupabaseClient(): SupabaseClient | null {
+  let url = defaultSupabaseUrl;
+  let key = defaultSupabaseAnonKey;
+
+  if (typeof window !== 'undefined') {
+    const customUrl = localStorage.getItem('dims_supabase_url');
+    const customKey = localStorage.getItem('dims_supabase_anon_key');
+    if (customUrl && !customUrl.includes('placeholder')) url = customUrl;
+    if (customKey && !customKey.includes('placeholder')) key = customKey;
+  }
+
+  if (!url || !key || url.includes('placeholder') || key.includes('placeholder') || !url.startsWith('https://')) {
+    return null;
+  }
+
+  const currentCacheKey = `${url}:${key}`;
+  if (cachedClient && cachedKey === currentCacheKey) {
+    return cachedClient;
+  }
+
+  try {
     cachedClient = createClient(url, key, {
       auth: {
         persistSession: true,
@@ -26,23 +54,10 @@ export function getSupabaseClient(): any {
         detectSessionInUrl: true,
       },
     });
+    cachedKey = currentCacheKey;
+    return cachedClient;
+  } catch (err) {
+    console.warn('Supabase client instantiation notice:', err);
+    return null;
   }
-
-  return cachedClient;
 }
-
-export const isSupabaseConfigured = () => {
-  if (typeof window !== 'undefined') {
-    const customUrl = localStorage.getItem('dims_supabase_url');
-    const customKey = localStorage.getItem('dims_supabase_anon_key');
-    if (customUrl && customKey && !customUrl.includes('placeholder')) {
-      return true;
-    }
-  }
-  return !!(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes('placeholder')
-  );
-};

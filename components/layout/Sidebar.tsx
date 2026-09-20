@@ -19,7 +19,6 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient } from '@/lib/supabase';
 import { store } from '@/lib/data-store';
 import { cn } from '@/lib/utils';
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { store } from '@/lib/data-store';
 import { Dormer, DormerType } from '@/lib/types';
@@ -34,7 +35,10 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
 import { formatDate } from '@/lib/utils';
 
-export default function DormersPage() {
+function DormersContent() {
+  const searchParams = useSearchParams();
+  const openId = searchParams.get('openId');
+
   const [dormers, setDormers] = useState<Dormer[]>(store.getDormers());
   const [activeTab, setActiveTab] = useState<'all' | DormerType>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,6 +63,22 @@ export default function DormersPage() {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (openId) {
+      const timer = setTimeout(() => {
+        const target = store.getDormerById(openId);
+        if (target) {
+          if (target.status === 'checked_out' || target.status === 'transferred') {
+            setShowFormer(true);
+          }
+          setDrawerDormer(target);
+          setIsDrawerOpen(true);
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [openId]);
 
   const activeDormers = dormers.filter(
     (d) => d.status !== 'checked_out' && d.status !== 'transferred'
@@ -560,5 +580,13 @@ export default function DormersPage() {
         onClose={() => setDormerToDelete(null)}
       />
     </AppShell>
+  );
+}
+
+export default function DormersPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-[#8C8C8A]">Loading resident masterlist...</div>}>
+      <DormersContent />
+    </Suspense>
   );
 }

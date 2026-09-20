@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Room, RoomType, RoomStatus } from '@/lib/types';
+import { Room, RoomType, RoomStatus, BedSlot } from '@/lib/types';
 import { store } from '@/lib/data-store';
 import { toast } from '@/components/ui/Toast';
 
@@ -26,6 +26,10 @@ const RoomFormContent: React.FC<{
   const [monthlyRate, setMonthlyRate] = useState(roomToEdit?.monthlyRate || 3500);
   const [notes, setNotes] = useState(roomToEdit?.notes || '');
 
+  const occupiedCount = roomToEdit
+    ? (roomToEdit.occupants?.length || store.getBedSlots(roomToEdit.id).filter((b: BedSlot) => b.isOccupied).length || 0)
+    : 0;
+
   const handleTypeChange = (newType: RoomType) => {
     setType(newType);
     if (newType === 'single') setCapacity(1);
@@ -38,6 +42,15 @@ const RoomFormContent: React.FC<{
     e.preventDefault();
     if (!roomNumber.trim()) {
       toast.error('Required Information', 'Room Number is required.');
+      return;
+    }
+
+    // Capacity validation against active occupants
+    if (roomToEdit && Number(capacity) < occupiedCount) {
+      toast.error(
+        'Capacity Constraint',
+        `Cannot reduce capacity to ${capacity}. Room ${roomNumber} currently has ${occupiedCount} active occupant(s). Please transfer or checkout occupants first.`
+      );
       return;
     }
 
@@ -140,15 +153,27 @@ const RoomFormContent: React.FC<{
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-[#2C2C2A] mb-1">Capacity (Beds)</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-medium text-[#2C2C2A]">Capacity (Beds)</label>
+            {occupiedCount > 0 && (
+              <span className="text-[10px] text-[#4F46E5] font-semibold">
+                {occupiedCount} active occupant{occupiedCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <input
             type="number"
-            min="1"
+            min={roomToEdit && occupiedCount > 0 ? occupiedCount : 1}
             max="8"
             value={capacity}
             onChange={(e) => setCapacity(Number(e.target.value))}
             className="input-minimal"
           />
+          {occupiedCount > 0 && Number(capacity) < occupiedCount && (
+            <p className="text-[10px] text-[#DC2626] mt-1">
+              Cannot set below {occupiedCount} active occupants.
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-xs font-medium text-[#2C2C2A] mb-1">Status</label>

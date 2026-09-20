@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { formatDate } from '@/lib/utils';
 import {
   X,
-  User,
   GraduationCap,
   Briefcase,
   UserCheck,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 interface Recipient {
   email: string;
@@ -26,17 +27,18 @@ function escapeHtml(str: string): string {
 const rateLimitMap = new Map<string, number[]>();
 
 export async function POST(request: NextRequest) {
-  // 1. Session verification
-  const sessionCookie = request.cookies.get('dims_staff_session');
-  if (!sessionCookie?.value || (sessionCookie.value !== '1' && sessionCookie.value.length < 32)) {
+  // 1. Session verification with cryptographic HMAC signature
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+  const session = verifySessionToken(sessionCookie?.value);
+  if (!session.valid) {
     return NextResponse.json(
       {
         success: false,
         isSimulated: false,
         sentCount: 0,
         failedCount: 0,
-        details: 'Unauthorized: Staff session required to send announcements.',
-        error: 'Unauthorized: Staff session required to send announcements.',
+        details: 'Unauthorized: Valid staff session required to send announcements.',
+        error: 'Unauthorized: Valid staff session required to send announcements.',
       },
       { status: 401 }
     );

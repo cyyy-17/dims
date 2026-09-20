@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
+import { SESSION_COOKIE_NAME } from '@/lib/auth';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   // Sign out of Supabase if connected
   try {
     const supabase = getSupabaseClient();
@@ -14,10 +15,10 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({ success: true });
   // Clear the HttpOnly session cookie
-  response.cookies.set('dims_staff_session', '', {
+  response.cookies.set(SESSION_COOKIE_NAME, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge: 0,
     path: '/',
   });

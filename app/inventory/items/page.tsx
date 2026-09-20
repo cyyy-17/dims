@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { store } from '@/lib/data-store';
 import { InventoryItem, InventoryCategory } from '@/lib/types';
@@ -23,7 +24,10 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
 import { cn } from '@/lib/utils';
 
-export default function ItemsPage() {
+function ItemsContent() {
+  const searchParams = useSearchParams();
+  const queryQrId = searchParams.get('qrId');
+
   const [items, setItems] = useState<InventoryItem[]>(store.getItems());
   const [categories, setCategories] = useState<InventoryCategory[]>(store.getCategories());
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -45,6 +49,18 @@ export default function ItemsPage() {
     });
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (queryQrId) {
+      const timer = setTimeout(() => {
+        const item = store.getItemById(queryQrId);
+        if (item) {
+          setQrItem(item);
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [queryQrId]);
 
   const filteredItems = items.filter((item) => {
     if (selectedCategory !== 'all' && item.categoryId !== selectedCategory) return false;
@@ -376,5 +392,13 @@ export default function ItemsPage() {
         onClose={() => setItemToDelete(null)}
       />
     </AppShell>
+  );
+}
+
+export default function ItemsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-xs text-[#8C8C8A]">Loading catalog items...</div>}>
+      <ItemsContent />
+    </Suspense>
   );
 }

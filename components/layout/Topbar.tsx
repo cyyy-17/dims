@@ -13,7 +13,6 @@ import {
   CalendarCheck,
   CheckCircle2,
   RefreshCw,
-  Cloud,
   CloudOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -164,7 +163,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                         key={d.id}
                         onClick={() => {
                           setSearchQuery('');
-                          router.push('/dormitory/dormers');
+                          router.push(`/dormitory/dormers?openId=${d.id}`);
                         }}
                         className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F8F8F6] cursor-pointer text-xs"
                       >
@@ -203,7 +202,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                         key={r.id}
                         onClick={() => {
                           setSearchQuery('');
-                          router.push('/dormitory/rooms');
+                          router.push(`/dormitory/rooms?roomId=${r.id}`);
                         }}
                         className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F8F8F6] cursor-pointer text-xs"
                       >
@@ -242,7 +241,7 @@ export const Topbar: React.FC<TopbarProps> = ({
                         key={i.id}
                         onClick={() => {
                           setSearchQuery('');
-                          router.push('/inventory/items');
+                          router.push(`/inventory/items?qrId=${i.id}`);
                         }}
                         className="flex items-center justify-between p-2 rounded-lg hover:bg-[#F8F8F6] cursor-pointer text-xs"
                       >

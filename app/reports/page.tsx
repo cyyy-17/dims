@@ -40,20 +40,61 @@ export default function ReportsPage() {
     return unsub;
   }, []);
 
+  // Date filtering logic
+  const isDateInRange = (dateStr?: string | null) => {
+    if (!startDate && !endDate) return true;
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    if (startDate && d < new Date(startDate)) return false;
+    if (endDate && d > new Date(endDate + 'T23:59:59')) return false;
+    return true;
+  };
+
+  // Filtered report datasets
+  const filteredRooms = rooms.filter((r) => {
+    if (!startDate && !endDate) return true;
+    if (r.occupants && r.occupants.length > 0) {
+      return r.occupants.some((o) => isDateInRange(o.checkInDate));
+    }
+    return false;
+  });
+
+  const filteredDormers = dormers.filter((d) => {
+    if (!startDate && !endDate) return true;
+    return isDateInRange(d.currentAssignment?.checkInDate) || isDateInRange(d.createdAt);
+  });
+
+  const filteredItems = items.filter((i) => {
+    if (!startDate && !endDate) return true;
+    return isDateInRange(i.updatedAt) || isDateInRange(i.createdAt);
+  });
+
+  const filteredRoomInventory = roomInventory.filter((ri) => {
+    if (ri.returnedAt) return false;
+    if (!startDate && !endDate) return true;
+    return isDateInRange(ri.assignedAt);
+  });
+
+  const filteredVisitors = visitorLogs.filter((l) => {
+    if (!startDate && !endDate) return true;
+    return isDateInRange(l.timeIn);
+  });
+
   const handlePrint = () => {
     const hasData =
       selectedReport === 'occupancy'
-        ? rooms.length > 0
+        ? filteredRooms.length > 0
         : selectedReport === 'dormers'
-        ? dormers.length > 0
+        ? filteredDormers.length > 0
         : selectedReport === 'inventory'
-        ? items.length > 0
+        ? filteredItems.length > 0
         : selectedReport === 'room_assets'
-        ? roomInventory.filter((r) => !r.returnedAt).length > 0
-        : visitorLogs.length > 0;
+        ? filteredRoomInventory.length > 0
+        : filteredVisitors.length > 0;
 
     if (!hasData) {
-      toast.warning('Nothing to Print', 'This report has no data records to print.');
+      toast.warning('Nothing to Print', 'This filtered report has no matching data records to print.');
       return;
     }
     window.print();
@@ -61,7 +102,7 @@ export default function ReportsPage() {
 
   const handleExportCsv = () => {
     if (selectedReport === 'occupancy') {
-      const rows = rooms.map((r) => ({
+      const rows = filteredRooms.map((r) => ({
         Room_Number: r.roomNumber,
         Floor: r.floor,
         Wing: r.wing,
@@ -74,7 +115,7 @@ export default function ReportsPage() {
       }));
       exportToCsv('dims_occupancy_report', rows);
     } else if (selectedReport === 'dormers') {
-      const rows = dormers.map((d) => ({
+      const rows = filteredDormers.map((d) => ({
         Type: d.type.toUpperCase(),
         Name: `${d.firstName} ${d.lastName}`,
         Email: d.email,
@@ -89,7 +130,7 @@ export default function ReportsPage() {
       }));
       exportToCsv('dims_dormers_masterlist_report', rows);
     } else if (selectedReport === 'inventory') {
-      const rows = items.map((i) => ({
+      const rows = filteredItems.map((i) => ({
         Item_Code: i.itemCode,
         Item_Name: i.name,
         Category: i.categoryName,
@@ -101,20 +142,18 @@ export default function ReportsPage() {
       }));
       exportToCsv('dims_inventory_valuation_report', rows);
     } else if (selectedReport === 'room_assets') {
-      const rows = roomInventory
-        .filter((ri) => !ri.returnedAt)
-        .map((ri) => ({
-          Room_Number: ri.roomNumber,
-          Item_Code: ri.itemCode,
-          Item_Name: ri.itemName,
-          Quantity: ri.quantity,
-          Condition: ri.condition,
-          Assigned_Date: ri.assignedAt,
-          Assigned_By: ri.assignedBy,
-        }));
+      const rows = filteredRoomInventory.map((ri) => ({
+        Room_Number: ri.roomNumber,
+        Item_Code: ri.itemCode,
+        Item_Name: ri.itemName,
+        Quantity: ri.quantity,
+        Condition: ri.condition,
+        Assigned_Date: ri.assignedAt,
+        Assigned_By: ri.assignedBy,
+      }));
       exportToCsv('dims_room_assets_deployment_report', rows);
     } else if (selectedReport === 'visitors') {
-      const rows = visitorLogs.map((l) => ({
+      const rows = filteredVisitors.map((l) => ({
         Visitor_Name: l.visitorName,
         Contact: l.contact || '',
         Purpose: l.purpose,
@@ -125,6 +164,20 @@ export default function ReportsPage() {
       }));
       exportToCsv('dims_visitor_register_report', rows);
     }
+  };
+
+  const getDocControlRef = () => {
+    const code =
+      selectedReport === 'occupancy'
+        ? 'OCC'
+        : selectedReport === 'dormers'
+        ? 'MST'
+        : selectedReport === 'inventory'
+        ? 'INV'
+        : selectedReport === 'room_assets'
+        ? 'RSA'
+        : 'VIS';
+    return `DOC-REF: ASR-AUD-2026-${code}-001`;
   };
 
   return (
@@ -138,12 +191,14 @@ export default function ReportsPage() {
             </p>
             <h1 className="text-xl font-bold text-[#141414] mt-1">{settings.schoolName}</h1>
             <p className="text-sm text-[#555552]">{settings.campusName}</p>
+            <p className="text-xs text-[#8C8C8A] mt-0.5 font-mono">{getDocControlRef()}</p>
           </div>
           <div className="text-right text-xs text-[#555552] space-y-0.5">
-            <p className="font-bold text-[#141414] text-sm">DIMS — Official Report</p>
+            <p className="font-bold text-[#141414] text-sm">DIMS — Official Audit Report</p>
             <p>Academic Year: {settings.academicYear}</p>
             <p>Generated: {formatDate(new Date().toISOString())}</p>
-            <p>Prepared by: {settings.dormitoryLeadName}</p>
+            <p>Period: {startDate ? formatDate(startDate) : 'Term Start'} – {endDate ? formatDate(endDate) : 'Present'}</p>
+            <p className="font-medium text-[#141414]">Prepared by: {settings.dormitoryLeadName}</p>
           </div>
         </div>
       </div>
@@ -240,7 +295,7 @@ export default function ReportsPage() {
                 setStartDate('');
                 setEndDate('');
               }}
-              className="text-[11px] text-[#DC2626] hover:underline cursor-pointer ml-1"
+              className="text-[11px] text-[#DC2626] hover:underline cursor-pointer ml-1 font-medium"
             >
               Clear Filter
             </button>
@@ -248,9 +303,9 @@ export default function ReportsPage() {
         </div>
         <div className="text-[11px] text-[#8C8C8A]">
           {startDate || endDate ? (
-            <span>Filtered report range active</span>
+            <span className="text-[#4F46E5] font-medium">Filtered report range active ({startDate || 'Start'} to {endDate || 'Present'})</span>
           ) : (
-            <span>Full academic term dataset</span>
+            <span>Full academic term dataset (unfiltered)</span>
           )}
         </div>
       </div>
@@ -268,23 +323,22 @@ export default function ReportsPage() {
             </div>
             <p className="text-xs text-[#555552]">{settings.campusName}</p>
             <p className="text-[11px] text-[#8C8C8A] mt-0.5">
-              Academic Services Representative (ASR) Dormitory Office · {settings.academicYear}
+              Office of Academic Services & Student Housing Administration · AY {settings.academicYear}
             </p>
           </div>
 
           <div className="text-left sm:text-right text-xs">
             <span className="font-mono font-bold text-[#4F46E5] text-sm">
-              {selectedReport === 'occupancy' && 'DOC-OCC-2026'}
-              {selectedReport === 'dormers' && 'DOC-MST-2026'}
-              {selectedReport === 'inventory' && 'DOC-INV-2026'}
-              {selectedReport === 'room_assets' && 'DOC-RSA-2026'}
-              {selectedReport === 'visitors' && 'DOC-VIS-2026'}
+              {getDocControlRef()}
             </span>
             <p className="text-[11px] text-[#8C8C8A] mt-0.5">
               Generated: {new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}
             </p>
             <p className="text-[10px] text-[#16A34A] font-medium flex items-center justify-start sm:justify-end gap-1 mt-0.5">
               <ShieldCheck className="w-3.5 h-3.5" /> Authenticated System Report
+            </p>
+            <p className="text-[9px] uppercase tracking-widest text-[#8C8C8A] mt-0.5">
+              Classification: Institutional Internal Audit
             </p>
           </div>
         </div>
@@ -297,7 +351,7 @@ export default function ReportsPage() {
                 Dormitory Room Occupancy & Bed Allocation Audit
               </h3>
               <span className="text-xs font-mono text-[#8C8C8A]">
-                Total Rooms: {rooms.length} · Capacity: {rooms.reduce((s, r) => s + r.capacity, 0)} Beds
+                Matching Rooms: {filteredRooms.length} · Capacity: {filteredRooms.reduce((s, r) => s + r.capacity, 0)} Beds
               </span>
             </div>
 
@@ -313,7 +367,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E4E4E0]">
-                {rooms.map((r) => (
+                {filteredRooms.map((r) => (
                   <tr key={r.id}>
                     <td className="p-2.5 font-bold font-mono">Room {r.roomNumber}</td>
                     <td className="p-2.5 text-[#555552]">
@@ -335,6 +389,13 @@ export default function ReportsPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredRooms.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-xs text-[#8C8C8A]">
+                      No rooms match the selected date range or filter.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -347,7 +408,7 @@ export default function ReportsPage() {
                 Active Dormer Masterlist Register
               </h3>
               <span className="text-xs font-mono text-[#8C8C8A]">
-                {dormers.length} Total Registered Residents
+                {filteredDormers.length} Registered Residents (Filtered)
               </span>
             </div>
 
@@ -363,7 +424,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E4E4E0]">
-                {dormers.map((d) => (
+                {filteredDormers.map((d) => (
                   <tr key={d.id}>
                     <td className="p-2.5 font-bold text-[#141414]">
                       {d.firstName} {d.lastName}
@@ -385,6 +446,13 @@ export default function ReportsPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredDormers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-xs text-[#8C8C8A]">
+                      No dormer records match the selected date range.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -397,7 +465,7 @@ export default function ReportsPage() {
                 Inventory Stock Valuation & Health Manifest
               </h3>
               <span className="text-xs font-mono text-[#8C8C8A]">
-                {items.reduce((s, i) => s + i.currentStock, 0)} Total Custody Units
+                {filteredItems.reduce((s, i) => s + i.currentStock, 0)} Total Custody Units
               </span>
             </div>
 
@@ -414,7 +482,7 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E4E4E0]">
-                {items.map((i) => (
+                {filteredItems.map((i) => (
                   <tr key={i.id}>
                     <td className="p-2.5 font-mono font-bold text-[#4F46E5]">{i.itemCode}</td>
                     <td className="p-2.5 font-semibold text-[#141414]">{i.name}</td>
@@ -437,6 +505,13 @@ export default function ReportsPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredItems.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-xs text-[#8C8C8A]">
+                      No inventory items found matching criteria.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -449,7 +524,7 @@ export default function ReportsPage() {
                 Room Physical Assets Deployment Matrix
               </h3>
               <span className="text-xs font-mono text-[#8C8C8A]">
-                Assets Assigned to Dormitory Rooms
+                {filteredRoomInventory.length} Assets Assigned to Dormitory Rooms
               </span>
             </div>
 
@@ -465,94 +540,101 @@ export default function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E4E4E0]">
-                {roomInventory
-                  .filter((ri) => !ri.returnedAt)
-                  .map((ri) => (
-                    <tr key={ri.id}>
-                      <td className="p-2.5 font-bold font-mono">Room {ri.roomNumber}</td>
-                      <td className="p-2.5 font-mono text-[#4F46E5]">{ri.itemCode}</td>
-                      <td className="p-2.5 font-semibold text-[#141414]">{ri.itemName}</td>
-                      <td className="p-2.5 font-mono font-bold">{ri.quantity} units</td>
-                      <td className="p-2.5 uppercase font-mono text-[10px]">{ri.condition}</td>
-                      <td className="p-2.5 text-[#555552]">{formatDate(ri.assignedAt)}</td>
-                    </tr>
-                  ))}
+                {filteredRoomInventory.map((ri) => (
+                  <tr key={ri.id}>
+                    <td className="p-2.5 font-bold font-mono">Room {ri.roomNumber}</td>
+                    <td className="p-2.5 font-mono text-[#4F46E5]">{ri.itemCode}</td>
+                    <td className="p-2.5 font-semibold text-[#141414]">{ri.itemName}</td>
+                    <td className="p-2.5 font-mono font-bold">{ri.quantity} units</td>
+                    <td className="p-2.5 uppercase font-mono text-[10px]">{ri.condition}</td>
+                    <td className="p-2.5 text-[#555552]">{formatDate(ri.assignedAt)}</td>
+                  </tr>
+                ))}
+                {filteredRoomInventory.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-xs text-[#8C8C8A]">
+                      No room assets deployment matches the selected date range filter.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         )}
 
-        {selectedReport === 'visitors' && (() => {
-          const filteredVisitors = visitorLogs.filter((l) => {
-            if (startDate && new Date(l.timeIn) < new Date(startDate)) return false;
-            if (endDate && new Date(l.timeIn) > new Date(endDate + 'T23:59:59')) return false;
-            return true;
-          });
-
-          return (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
-                  Visitor Security & Campus Entry Register
-                </h3>
-                <span className="text-xs font-mono text-[#8C8C8A]">
-                  {filteredVisitors.length} Filtered Visits Logged
-                </span>
-              </div>
-
-              <table className="w-full text-left text-xs border border-[#E4E4E0]">
-                <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
-                  <tr>
-                    <th className="p-2.5 font-semibold text-[#8C8C8A]">Visitor Name</th>
-                    <th className="p-2.5 font-semibold text-[#8C8C8A]">Contact</th>
-                    <th className="p-2.5 font-semibold text-[#8C8C8A]">Purpose of Visit</th>
-                    <th className="p-2.5 font-semibold text-[#8C8C8A]">Host Resident</th>
-                    <th className="p-2.5 font-semibold text-[#8C8C8A]">Time In</th>
-                    <th className="p-2.5 font-semibold text-[#8C8C8A]">Time Out</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E4E4E0]">
-                  {filteredVisitors.map((l) => (
-                    <tr key={l.id}>
-                      <td className="p-2.5 font-bold text-[#141414]">{l.visitorName}</td>
-                      <td className="p-2.5 text-[#555552]">{l.contact || '—'}</td>
-                      <td className="p-2.5 text-[#2C2C2A]">{l.purpose}</td>
-                      <td className="p-2.5 font-medium text-[#4F46E5]">
-                        {l.dormerVisitedName || 'General Campus'}
-                      </td>
-                      <td className="p-2.5 font-mono text-[11px]">{formatDateTime(l.timeIn)}</td>
-                      <td className="p-2.5 font-mono text-[11px]">
-                        {l.timeOut ? formatDateTime(l.timeOut) : 'Currently Inside'}
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredVisitors.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-xs text-[#8C8C8A]">
-                        No visitor entries match the selected date range filter.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+        {selectedReport === 'visitors' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
+                Visitor Security & Campus Entry Register
+              </h3>
+              <span className="text-xs font-mono text-[#8C8C8A]">
+                {filteredVisitors.length} Filtered Visits Logged
+              </span>
             </div>
-          );
-        })()}
 
-        {/* Printable Official Signatures Footer */}
-        <div className="pt-10 border-t border-[#E4E4E0] grid grid-cols-2 gap-12 text-xs">
+            <table className="w-full text-left text-xs border border-[#E4E4E0]">
+              <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
+                <tr>
+                  <th className="p-2.5 font-semibold text-[#8C8C8A]">Visitor Name</th>
+                  <th className="p-2.5 font-semibold text-[#8C8C8A]">Contact</th>
+                  <th className="p-2.5 font-semibold text-[#8C8C8A]">Purpose of Visit</th>
+                  <th className="p-2.5 font-semibold text-[#8C8C8A]">Host Resident</th>
+                  <th className="p-2.5 font-semibold text-[#8C8C8A]">Time In</th>
+                  <th className="p-2.5 font-semibold text-[#8C8C8A]">Time Out</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E4E4E0]">
+                {filteredVisitors.map((l) => (
+                  <tr key={l.id}>
+                    <td className="p-2.5 font-bold text-[#141414]">{l.visitorName}</td>
+                    <td className="p-2.5 text-[#555552]">{l.contact || '—'}</td>
+                    <td className="p-2.5 text-[#2C2C2A]">{l.purpose}</td>
+                    <td className="p-2.5 font-medium text-[#4F46E5]">
+                      {l.dormerVisitedName || 'General Campus'}
+                    </td>
+                    <td className="p-2.5 font-mono text-[11px]">{formatDateTime(l.timeIn)}</td>
+                    <td className="p-2.5 font-mono text-[11px]">
+                      {l.timeOut ? formatDateTime(l.timeOut) : 'Currently Inside'}
+                    </td>
+                  </tr>
+                ))}
+                {filteredVisitors.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-xs text-[#8C8C8A]">
+                      No visitor entries match the selected date range filter.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Printable Official 3-Tier Signatures Footer */}
+        <div className="pt-10 border-t border-[#E4E4E0] grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
           <div>
-            <p className="text-[#8C8C8A]">Prepared and Verified by:</p>
-            <div className="h-10 border-b border-[#141414] mt-6" />
+            <p className="text-[#8C8C8A] font-medium">1. Prepared and Verified by:</p>
+            <div className="h-10 border-b border-[#141414] mt-4" />
             <p className="font-bold text-[#141414] mt-1.5">{settings.dormitoryLeadName}</p>
             <p className="text-[11px] text-[#8C8C8A]">ASR Dormitory Lead Representative & Custodian</p>
+            <p className="text-[10px] text-[#8C8C8A]">Date: ________________________</p>
           </div>
 
           <div>
-            <p className="text-[#8C8C8A]">Noted and Approved by:</p>
-            <div className="h-10 border-b border-[#141414] mt-6" />
+            <p className="text-[#8C8C8A] font-medium">2. Audited and Reviewed by:</p>
+            <div className="h-10 border-b border-[#141414] mt-4" />
+            <p className="font-bold text-[#141414] mt-1.5">Property & Custodial Services Officer</p>
+            <p className="text-[11px] text-[#8C8C8A]">Campus Logistics & Inventory Control</p>
+            <p className="text-[10px] text-[#8C8C8A]">Date: ________________________</p>
+          </div>
+
+          <div>
+            <p className="text-[#8C8C8A] font-medium">3. Noted and Approved by:</p>
+            <div className="h-10 border-b border-[#141414] mt-4" />
             <p className="font-bold text-[#141414] mt-1.5">Dean of Student Affairs & Services</p>
             <p className="text-[11px] text-[#8C8C8A]">{settings.schoolName}</p>
+            <p className="text-[10px] text-[#8C8C8A]">Date: ________________________</p>
           </div>
         </div>
       </div>
