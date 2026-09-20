@@ -26,12 +26,12 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
   }, []);
 
   return (
-    <div className="min-h-screen flex bg-[#F8F8F6]">
+    <div className="min-h-screen flex bg-[#F8F8F6] print:bg-white print:block print:min-h-0">
       {/* Sidebar */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:block print:overflow-visible">
         <Topbar
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
           onOpenQuickDormer={() => setIsDormerModalOpen(true)}
@@ -39,26 +39,28 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({ children }) 
           onOpenQuickAnnouncement={() => setIsAnnouncementModalOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">{children}</div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 print:p-0 print:overflow-visible print:block">
+          <div className="max-w-7xl mx-auto space-y-6 print:max-w-none print:space-y-0">{children}</div>
         </main>
       </div>
 
       {/* Global Quick Action Modals */}
-      <DormerModal
-        isOpen={isDormerModalOpen}
-        onClose={() => setIsDormerModalOpen(false)}
-      />
+      <div className="no-print">
+        <DormerModal
+          isOpen={isDormerModalOpen}
+          onClose={() => setIsDormerModalOpen(false)}
+        />
 
-      <StockTransactionModal
-        isOpen={isStockModalOpen}
-        onClose={() => setIsStockModalOpen(false)}
-      />
+        <StockTransactionModal
+          isOpen={isStockModalOpen}
+          onClose={() => setIsStockModalOpen(false)}
+        />
 
-      <ComposeAnnouncementModal
-        isOpen={isAnnouncementModalOpen}
-        onClose={() => setIsAnnouncementModalOpen(false)}
-      />
+        <ComposeAnnouncementModal
+          isOpen={isAnnouncementModalOpen}
+          onClose={() => setIsAnnouncementModalOpen(false)}
+        />
+      </div>
     </div>
   );
 };

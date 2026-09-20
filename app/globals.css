@@ -145,37 +145,99 @@ body {
 
 /* Print Stylesheet for Official Reports & Isolated Asset Tags */
 @media print {
+  @page {
+    margin: 12mm 12mm 12mm 12mm;
+    size: auto;
+  }
+
+  html,
   body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #141414 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
-  .no-print {
+
+  /* Force hide all navigation, header, sidebar, buttons, and popups */
+  header,
+  aside,
+  nav,
+  .no-print,
+  button,
+  input,
+  select,
+  [role="dialog"],
+  [role="navigation"] {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
-  .minimal-card {
-    border: 1px solid #cccccc !important;
+
+  /* Reset layout containers so only the printable content is rendered */
+  body > div,
+  body > div > div,
+  main,
+  div:has(> .report-document-sheet) {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
     box-shadow: none !important;
   }
+
+  .minimal-card {
+    border: 1px solid #E4E4E0 !important;
+    box-shadow: none !important;
+  }
+
   .report-document-sheet {
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    background: transparent !important;
   }
+
   .report-table-print {
     border-collapse: collapse !important;
     width: 100% !important;
   }
-  .report-table-print th,
-  .report-table-print td {
-    border: 1px solid #d1d5db !important;
-    padding: 6px 8px !important;
+
+  .report-table-print th {
+    background-color: #F8F8F6 !important;
+    color: #555552 !important;
+    border: 1px solid #E4E4E0 !important;
+    padding: 5px 8px !important;
+    font-size: 8pt !important;
+    font-weight: 600 !important;
   }
-  .page-break-avoid {
+
+  .report-table-print td {
+    border: 1px solid #E4E4E0 !important;
+    padding: 5px 8px !important;
+    font-size: 8pt !important;
+    color: #141414 !important;
+  }
+
+  .report-table-print tfoot td {
+    border: 1px solid #E4E4E0 !important;
+    background-color: #FAFAF9 !important;
+    padding: 5px 8px !important;
+    font-size: 8pt !important;
+  }
+
+  .page-break-avoid,
+  tr {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }

@@ -89,14 +89,14 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] md:hidden"
+          className="no-print fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px] md:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-[#E4E4E0] flex flex-col transition-transform duration-200 md:static md:translate-x-0',
+          'no-print fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-[#E4E4E0] flex flex-col transition-transform duration-200 md:static md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >

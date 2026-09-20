@@ -106,7 +106,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   const totalAlerts = metrics.inventoryHealth.lowStockCount + metrics.inventoryHealth.outOfStockCount;
 
   return (
-    <header className="h-16 px-4 md:px-8 border-b border-[#E4E4E0] bg-white flex items-center justify-between sticky top-0 z-30">
+    <header className="no-print h-16 px-4 md:px-8 border-b border-[#E4E4E0] bg-white flex items-center justify-between sticky top-0 z-30">
       {/* Left: Mobile Toggle & Global Search */}
       <div className="flex items-center gap-4 flex-1 max-w-lg">
         <button

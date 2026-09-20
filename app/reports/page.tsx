@@ -9,8 +9,6 @@ import { exportToCsv } from '@/lib/csv';
 import {
   Printer,
   Download,
-  ShieldCheck,
-  Building2,
   Calendar,
   Search,
   DoorOpen,
@@ -20,7 +18,6 @@ import {
   ClipboardList,
   RotateCcw,
   TrendingUp,
-  FileCheck,
 } from 'lucide-react';
 import { formatDate, formatDateTime, formatCurrency } from '@/lib/utils';
 import { toast } from '@/components/ui/Toast';
@@ -172,20 +169,6 @@ export default function ReportsPage() {
     });
   }, [visitorLogs, startDate, endDate, searchQuery, isDateInRange]);
 
-  // Document Control Reference Code
-  const getDocControlRef = () => {
-    const code =
-      selectedReport === 'occupancy'
-        ? 'OCC'
-        : selectedReport === 'dormers'
-        ? 'MST'
-        : selectedReport === 'inventory'
-        ? 'INV'
-        : selectedReport === 'room_assets'
-        ? 'RSA'
-        : 'VIS';
-    return `DOC-REF: ASR-AUD-2026-${code}-001`;
-  };
 
   const handlePrint = () => {
     const hasData =
@@ -670,67 +653,58 @@ export default function ReportsPage() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          5. FORMAL INSTITUTIONAL DOCUMENT SHEET
+          5. PLAIN, PROFESSIONAL & MINIMALIST DOCUMENT SHEET
       ───────────────────────────────────────────────────────────── */}
       <div className="report-document-sheet bg-white border border-[#E4E4E0] shadow-sm rounded-xl p-8 space-y-6">
-        {/* Institutional Letterhead Header */}
-        <div className="border-b-2 border-[#141414] pb-5 flex flex-col md:flex-row md:items-start justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#4F46E5] text-white flex items-center justify-center shrink-0 shadow-sm print:border print:border-[#141414]">
-              <Building2 className="w-6 h-6" />
+        {/* Minimalist Professional Header */}
+        <div className="border-b border-[#E4E4E0] pb-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h1 className="text-base font-bold tracking-tight text-[#141414] uppercase">
+                {settings.schoolName || 'First Asia Institute of Technology and Humanities'}
+              </h1>
+              <p className="text-xs text-[#555552] mt-0.5">
+                {settings.campusName || 'ASEAN Student Residences (ASR)'} · Dormitory &amp; Inventory Management System
+              </p>
             </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-[#141414] uppercase tracking-wide">
-                  {settings.schoolName}
-                </h2>
-                <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-widest bg-[#EEF2FF] text-[#4F46E5] px-2 py-0.5 rounded border border-[#C7D2FE]">
-                  OFFICIAL AUDIT COPY
-                </span>
-              </div>
-              <p className="text-xs font-semibold text-[#555552]">{settings.campusName}</p>
+            <div className="text-left sm:text-right text-xs text-[#555552] space-y-0.5">
+              <p className="font-mono text-[11px]">
+                <span className="text-[#8C8C8A]">Date:</span>{' '}
+                {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+              {(startDate || endDate) && (
+                <p className="font-mono text-[11px]">
+                  <span className="text-[#8C8C8A]">Period:</span>{' '}
+                  {startDate ? formatDate(startDate) : 'Start'} – {endDate ? formatDate(endDate) : 'Present'}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 border-t border-[#F2F2EF]">
+            <div>
+              <h2 className="text-sm font-semibold text-[#141414]">
+                {selectedReport === 'occupancy' && 'Dormitory Room Occupancy & Bed Slot Allocation Report'}
+                {selectedReport === 'dormers' && 'Active Resident Masterlist & Census Register'}
+                {selectedReport === 'inventory' && 'Physical Asset & Inventory Stock Report'}
+                {selectedReport === 'room_assets' && 'Room Custody Asset Manifest'}
+                {selectedReport === 'visitors' && 'Campus Entry & Visitor Logbook'}
+              </h2>
               <p className="text-[11px] text-[#8C8C8A]">
-                Office of Student Housing, Residence Life & Institutional Property Custody
-              </p>
-              <p className="text-[10px] font-mono text-[#8C8C8A]">
-                System Host: DIMS Enterprise Engine · Academic Year: {settings.academicYear}
+                {selectedReport === 'occupancy' && 'Physical room capacity, wing assignments, monthly rates, and active occupants.'}
+                {selectedReport === 'dormers' && 'Resident profiles, affiliations, contact info, and room assignments.'}
+                {selectedReport === 'inventory' && 'Warehouse asset catalog, stock balances, storage locations, and alert levels.'}
+                {selectedReport === 'room_assets' && 'Assets and fixtures deployed inside resident rooms with condition status.'}
+                {selectedReport === 'visitors' && 'Visitor security records, destination rooms, and entry/exit timestamps.'}
               </p>
             </div>
-          </div>
-
-          <div className="text-left md:text-right space-y-1 text-xs">
-            <div className="inline-block bg-[#FAFAF9] border border-[#E4E4E0] px-2.5 py-1 rounded-md font-mono text-xs font-bold text-[#4F46E5]">
-              {getDocControlRef()}
+            <div className="text-xs font-mono text-[#555552] shrink-0">
+              {selectedReport === 'occupancy' && `${filteredRooms.length} Rooms · ${totalOccupants}/${totalCapacity} Beds (${occupancyRate}% Occupancy)`}
+              {selectedReport === 'dormers' && `${filteredDormers.length} Registered Residents`}
+              {selectedReport === 'inventory' && `${filteredItems.length} Items · ${totalStockUnits} Units in Stock`}
+              {selectedReport === 'room_assets' && `${filteredRoomInventory.length} Deployed Lines · ${totalDeployedQuantity} Units`}
+              {selectedReport === 'visitors' && `${filteredVisitors.length} Logged Entries (${activeVisitorsInside} Inside)`}
             </div>
-            <p className="text-[11px] text-[#555552] font-medium">
-              Report Generated: {new Date().toLocaleDateString('en-US', { dateStyle: 'full' })}
-            </p>
-            <p className="text-[10px] text-[#16A34A] font-semibold flex items-center justify-start md:justify-end gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> Authenticated & Cloud Synchronized
-            </p>
-            <p className="text-[9px] uppercase tracking-widest text-[#8C8C8A] font-mono">
-              Classification: Institutional Administrative Compliance Record
-            </p>
-          </div>
-        </div>
-
-        {/* Audit Period & Scope Banner */}
-        <div className="p-3 bg-[#F8F8F6] border border-[#E4E4E0] rounded-lg flex flex-wrap items-center justify-between text-xs text-[#555552] gap-2">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#141414] uppercase text-[11px]">Audit Window:</span>
-            <span className="font-mono text-[11px] bg-white px-2 py-0.5 rounded border border-[#E4E4E0]">
-              {startDate ? formatDate(startDate) : 'Term Inauguration'} – {endDate ? formatDate(endDate) : 'Current Date'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span>
-              Audited by: <strong className="text-[#141414]">{settings.dormitoryLeadName}</strong>
-            </span>
-            <span className="text-[#8C8C8A]">|</span>
-            <span className="text-[11px] font-mono text-[#4F46E5] font-medium flex items-center gap-1">
-              <FileCheck className="w-3.5 h-3.5" /> SHA256: 8F4A-E39C-29C1
-            </span>
           </div>
         </div>
 
@@ -739,20 +713,6 @@ export default function ReportsPage() {
         ───────────────────────────────────────────────────────────── */}
         {selectedReport === 'occupancy' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
-                  Dormitory Room Occupancy & Bed Slot Allocation Audit
-                </h3>
-                <p className="text-[11px] text-[#8C8C8A]">
-                  Physical room capacity, wing assignment, monthly rates, and active registered occupants.
-                </p>
-              </div>
-              <span className="text-xs font-mono font-medium text-[#555552] bg-[#F8F8F6] px-2.5 py-1 rounded border border-[#E4E4E0]">
-                {filteredRooms.length} Rooms Audited · {totalOccupants} / {totalCapacity} Beds ({occupancyRate}% Occupancy)
-              </span>
-            </div>
-
             <div className="border border-[#E4E4E0] rounded-xl overflow-hidden">
               <table className="report-table-print w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
@@ -831,7 +791,7 @@ export default function ReportsPage() {
                 </tbody>
                 {/* Summary Table Footer */}
                 {filteredRooms.length > 0 && (
-                  <tfoot className="bg-[#FAFAF9] border-t-2 border-[#141414] font-semibold text-[#141414]">
+                  <tfoot className="bg-[#FAFAF9] border-t border-[#E4E4E0] font-semibold text-[#141414]">
                     <tr>
                       <td className="py-3 px-3 uppercase text-[11px] tracking-wider" colSpan={3}>
                         Aggregate Totals ({filteredRooms.length} Rooms):
@@ -858,20 +818,6 @@ export default function ReportsPage() {
         ───────────────────────────────────────────────────────────── */}
         {selectedReport === 'dormers' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
-                  Active Dormer Masterlist & Resident Census Register
-                </h3>
-                <p className="text-[11px] text-[#8C8C8A]">
-                  Student, employee, and transient resident profiles with official affiliations and room assignments.
-                </p>
-              </div>
-              <span className="text-xs font-mono font-medium text-[#555552] bg-[#F8F8F6] px-2.5 py-1 rounded border border-[#E4E4E0]">
-                {filteredDormers.length} Registered Residents
-              </span>
-            </div>
-
             <div className="border border-[#E4E4E0] rounded-xl overflow-hidden">
               <table className="report-table-print w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
@@ -947,20 +893,6 @@ export default function ReportsPage() {
         ───────────────────────────────────────────────────────────── */}
         {selectedReport === 'inventory' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
-                  Inventory Stock Manifest & Custodial Health Audit
-                </h3>
-                <p className="text-[11px] text-[#8C8C8A]">
-                  Physical custody levels, warehouse locations, minimum safety thresholds, and replenishment statuses.
-                </p>
-              </div>
-              <span className="text-xs font-mono font-medium text-[#555552] bg-[#F8F8F6] px-2.5 py-1 rounded border border-[#E4E4E0]">
-                {filteredItems.length} SKUs Audited · {totalStockUnits} Total In-Stock Units
-              </span>
-            </div>
-
             <div className="border border-[#E4E4E0] rounded-xl overflow-hidden">
               <table className="report-table-print w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
@@ -1013,7 +945,7 @@ export default function ReportsPage() {
                   )}
                 </tbody>
                 {filteredItems.length > 0 && (
-                  <tfoot className="bg-[#FAFAF9] border-t-2 border-[#141414] font-semibold text-[#141414]">
+                  <tfoot className="bg-[#FAFAF9] border-t border-[#E4E4E0] font-semibold text-[#141414]">
                     <tr>
                       <td className="py-3 px-3 uppercase text-[11px] tracking-wider" colSpan={3}>
                         Total Warehouse Custody ({filteredItems.length} SKUs):
@@ -1037,20 +969,6 @@ export default function ReportsPage() {
         ───────────────────────────────────────────────────────────── */}
         {selectedReport === 'room_assets' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
-                  Dormitory Room Physical Assets Deployment Matrix
-                </h3>
-                <p className="text-[11px] text-[#8C8C8A]">
-                  Furniture, electronics, and safety fixtures deployed inside active resident rooms.
-                </p>
-              </div>
-              <span className="text-xs font-mono font-medium text-[#555552] bg-[#F8F8F6] px-2.5 py-1 rounded border border-[#E4E4E0]">
-                {filteredRoomInventory.length} Assets Bound · {totalDeployedQuantity} Total Units
-              </span>
-            </div>
-
             <div className="border border-[#E4E4E0] rounded-xl overflow-hidden">
               <table className="report-table-print w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
@@ -1110,20 +1028,6 @@ export default function ReportsPage() {
         ───────────────────────────────────────────────────────────── */}
         {selectedReport === 'visitors' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-[#141414] uppercase tracking-wider">
-                  Campus Entry & Visitor Security Logbook
-                </h3>
-                <p className="text-[11px] text-[#8C8C8A]">
-                  Official visitor register, verified host residents, purpose of entry, and chronological dwell stamps.
-                </p>
-              </div>
-              <span className="text-xs font-mono font-medium text-[#555552] bg-[#F8F8F6] px-2.5 py-1 rounded border border-[#E4E4E0]">
-                {filteredVisitors.length} Filtered Entries · {activeVisitorsInside} Currently Inside
-              </span>
-            </div>
-
             <div className="border border-[#E4E4E0] rounded-xl overflow-hidden">
               <table className="report-table-print w-full text-left text-xs border-collapse">
                 <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
@@ -1177,64 +1081,10 @@ export default function ReportsPage() {
           </div>
         )}
 
-        {/* ─────────────────────────────────────────────────────────────
-            6. OFFICIAL 3-TIER SIGNATURES & ENDORSEMENTS BLOCK
-        ───────────────────────────────────────────────────────────── */}
-        <div className="page-break-avoid pt-12 border-t-2 border-[#141414] grid grid-cols-1 md:grid-cols-3 gap-8 text-xs">
-          {/* Tier 1 */}
-          <div className="space-y-1">
-            <p className="text-[#8C8C8A] font-semibold text-[11px] uppercase tracking-wider">
-              1. Prepared and Certified by:
-            </p>
-            <div className="h-12 border-b border-[#141414] flex items-end pb-1">
-              <span className="font-mono text-[10px] text-[#4F46E5] italic">/s/ {settings.dormitoryLeadName}</span>
-            </div>
-            <p className="font-bold text-[#141414] text-sm pt-1">{settings.dormitoryLeadName}</p>
-            <p className="text-[11px] text-[#555552]">ASR Lead Dormitory Custodian & Representative</p>
-            <p className="text-[10px] text-[#8C8C8A]">Office of Residence Life Administration</p>
-            <p className="text-[10px] font-mono text-[#8C8C8A] pt-1">
-              Date: {formatDate(new Date().toISOString())}
-            </p>
-          </div>
-
-          {/* Tier 2 */}
-          <div className="space-y-1">
-            <p className="text-[#8C8C8A] font-semibold text-[11px] uppercase tracking-wider">
-              2. Audited and Reconciled by:
-            </p>
-            <div className="h-12 border-b border-[#141414] flex items-end pb-1">
-              <span className="font-mono text-[10px] text-[#8C8C8A] italic">/s/ Custodial Officer</span>
-            </div>
-            <p className="font-bold text-[#141414] text-sm pt-1">Property Custodial Services Officer</p>
-            <p className="text-[11px] text-[#555552]">Campus Physical Assets & Logistics Management</p>
-            <p className="text-[10px] text-[#8C8C8A]">Institutional Audit Committee</p>
-            <p className="text-[10px] font-mono text-[#8C8C8A] pt-1">
-              Date: ________________________
-            </p>
-          </div>
-
-          {/* Tier 3 */}
-          <div className="space-y-1">
-            <p className="text-[#8C8C8A] font-semibold text-[11px] uppercase tracking-wider">
-              3. Noted and Endorsed by:
-            </p>
-            <div className="h-12 border-b border-[#141414] flex items-end pb-1">
-              <span className="font-mono text-[10px] text-[#8C8C8A] italic">/s/ Dean of Student Affairs</span>
-            </div>
-            <p className="font-bold text-[#141414] text-sm pt-1">Dean of Student Affairs & Services</p>
-            <p className="text-[11px] text-[#555552]">{settings.schoolName}</p>
-            <p className="text-[10px] text-[#8C8C8A]">Executive Academic Council</p>
-            <p className="text-[10px] font-mono text-[#8C8C8A] pt-1">
-              Date: ________________________
-            </p>
-          </div>
-        </div>
-
-        {/* Audit Footnote */}
-        <div className="pt-4 border-t border-[#E4E4E0] flex flex-col sm:flex-row items-center justify-between text-[10px] text-[#8C8C8A] font-mono gap-2">
-          <span>DIMS v2.0 Enterprise Release · Immutable Ledger Verification</span>
-          <span>Printed from https://dims.firstasia.edu.ph/reports</span>
-          <span>Page 1 of 1 (Certified Institutional Record)</span>
+        {/* Minimalist Document Footer */}
+        <div className="pt-4 border-t border-[#E4E4E0] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#8C8C8A] gap-2">
+          <span>DIMS · Dormitory &amp; Inventory Management System</span>
+          <span>CONFIDENTIAL · FOR INTERNAL ADMINISTRATIVE USE ONLY</span>
         </div>
       </div>
     </AppShell>
