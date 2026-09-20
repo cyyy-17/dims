@@ -648,7 +648,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Right: Live Table Search Filter */}
-        <div className="relative min-w-[240px]">
+        <div className="relative min-w-60">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8C8C8A]" />
           <input
             type="text"
