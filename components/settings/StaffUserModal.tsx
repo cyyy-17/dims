@@ -88,6 +88,7 @@ const StaffUserForm: React.FC<{
           body: JSON.stringify({
             id: userToEdit.id,
             email: userToEdit.email,
+            fullName: fullName.trim(),
             role,
             designation: designation.trim() || 'ASR Staff',
             isActive,
@@ -108,6 +109,14 @@ const StaffUserForm: React.FC<{
           contactNo: contactNo.trim(),
           isActive,
         });
+
+        if (isEditingSelf) {
+          store.updateCurrentUser({
+            fullName: fullName.trim(),
+            designation: designation.trim(),
+            contactNo: contactNo.trim(),
+          });
+        }
 
         toast.success('Staff Updated', `Account for ${fullName} updated successfully.`);
       } else {

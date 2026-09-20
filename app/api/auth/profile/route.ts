@@ -195,11 +195,37 @@ export async function PATCH(request: NextRequest) {
         );
 
         if (existingUser) {
-          await admin.from('user_profiles').upsert({
-            id: existingUser.id,
-            full_name: fullName || existingUser.user_metadata?.full_name || 'ASR Staff',
-            designation: designation || existingUser.user_metadata?.designation || 'ASR Staff',
+          // 1. Update user_profiles table directly
+          const updatePayload: Record<string, string> = {
             updated_at: new Date().toISOString(),
+          };
+          if (fullName) updatePayload.full_name = fullName.trim();
+          if (designation) updatePayload.designation = designation.trim();
+
+          const { error: pErr } = await admin
+            .from('user_profiles')
+            .update(updatePayload)
+            .eq('id', existingUser.id);
+
+          if (pErr) {
+            // If row doesn't exist yet, insert with required role
+            await admin.from('user_profiles').upsert({
+              id: existingUser.id,
+              full_name: fullName.trim() || 'ASR Staff',
+              designation: designation?.trim() || 'ASR Staff',
+              role: existingUser.user_metadata?.role || 'super_admin',
+              is_active: true,
+              updated_at: new Date().toISOString(),
+            });
+          }
+
+          // 2. Keep auth.users metadata in sync
+          await admin.auth.admin.updateUserById(existingUser.id, {
+            user_metadata: {
+              ...existingUser.user_metadata,
+              ...(fullName ? { full_name: fullName.trim() } : {}),
+              ...(designation ? { designation: designation.trim() } : {}),
+            },
           });
         }
       } catch (e) {

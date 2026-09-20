@@ -185,7 +185,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, role, designation, isActive, newPassword, email } = body || {};
+    const { id, fullName, role, designation, isActive, newPassword, email } = body || {};
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'User ID is required.' }, { status: 400 });
@@ -205,11 +205,26 @@ export async function PATCH(request: NextRequest) {
       const updatePayload: Record<string, string | boolean> = {
         updated_at: new Date().toISOString(),
       };
+      if (fullName !== undefined && fullName.trim()) updatePayload.full_name = fullName.trim();
       if (role !== undefined) updatePayload.role = role;
       if (designation !== undefined) updatePayload.designation = designation;
       if (isActive !== undefined) updatePayload.is_active = isActive;
 
       await admin.from('user_profiles').update(updatePayload).eq('id', id);
+
+      // Keep auth.users metadata in sync
+      const metaUpdates: Record<string, string> = {};
+      if (fullName !== undefined && fullName.trim()) metaUpdates.full_name = fullName.trim();
+      if (designation !== undefined) metaUpdates.designation = designation;
+      if (role !== undefined) metaUpdates.role = role;
+
+      if (Object.keys(metaUpdates).length > 0) {
+        try {
+          await admin.auth.admin.updateUserById(id, { user_metadata: metaUpdates });
+        } catch (mErr) {
+          console.warn('Auth user metadata update notice:', mErr);
+        }
+      }
 
       // Handle password reset if requested
       if (newPassword) {

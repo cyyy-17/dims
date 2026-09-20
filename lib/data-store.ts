@@ -25,7 +25,7 @@ const STORAGE_KEY_PREFIX = 'dims_asr_v2_';
 // Initial Seeds
 const INITIAL_STAFF: StaffUser = {
   id: 'usr-asr-lead',
-  fullName: 'Maria Joy Clemente',
+  fullName: 'Mary Joy Clemente',
   email: 'aseanresidences@firstasia.edu.ph',
   role: 'super_admin',
   designation: 'ASR Head Representative & Dorm Custodian',
@@ -66,7 +66,7 @@ const INITIAL_SETTINGS: AppSettings = {
   campusName: 'ASEAN Student Residences (ASR)',
   academicYear: 'A.Y. 2026 - 2027',
   systemName: 'DIMS',
-  dormitoryLeadName: 'Maria Joy Clemente',
+  dormitoryLeadName: 'Mary Joy Clemente',
   dormitoryLeadContact: '+63 917 555 0192',
   brevoSenderEmail:
     process.env.NEXT_PUBLIC_BREVO_SENDER_EMAIL || 'aseanresidences@firstasia.edu.ph',
@@ -978,8 +978,25 @@ class DataStore {
 
       // If updating current user, sync current_user too
       const current = this.getCurrentUser();
-      if (current.id === id) {
+      const isCurrent =
+        current.id === id ||
+        (staffList[idx].email && current.email.toLowerCase() === staffList[idx].email.toLowerCase());
+
+      if (isCurrent) {
         this.setItem('current_user', staffList[idx]);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('dims_staff_name', staffList[idx].fullName);
+          localStorage.setItem('dims_staff_email', staffList[idx].email);
+        }
+        if (updates.fullName) {
+          const settings = this.getSettings();
+          if (settings.dormitoryLeadName === current.fullName || current.role === 'super_admin') {
+            this.updateSettings({
+              dormitoryLeadName: updates.fullName,
+              dormitoryLeadContact: updates.contactNo || settings.dormitoryLeadContact,
+            });
+          }
+        }
       }
 
       this.logActivity('UPDATE_STAFF_USER', 'settings', `Updated staff account settings for ${staffList[idx].fullName}.`);
