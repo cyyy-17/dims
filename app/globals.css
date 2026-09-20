@@ -159,6 +159,26 @@ body {
     border: 1px solid #cccccc !important;
     box-shadow: none !important;
   }
+  .report-document-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  .report-table-print {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  .report-table-print th,
+  .report-table-print td {
+    border: 1px solid #d1d5db !important;
+    padding: 6px 8px !important;
+  }
+  .page-break-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
 
   /* Isolated Asset Property Tag Mode */
   body.printing-tag {
