@@ -28,16 +28,14 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const [staffName] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return (
-        localStorage.getItem('dims_staff_name') ||
-        store.getSettings().dormitoryLeadName ||
-        'ASR Staff Representative'
-      );
-    }
-    return 'ASR Staff Representative';
-  });
+  const [staffUser, setStaffUser] = React.useState(() => store.getCurrentUser());
+
+  React.useEffect(() => {
+    const unsub = store.subscribe(() => {
+      setStaffUser(store.getCurrentUser());
+    });
+    return unsub;
+  }, []);
 
   const handleSignOut = async () => {
     try {
@@ -79,6 +77,9 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
       items: [
         { name: 'Reports & Export', href: '/reports', icon: FileBarChart },
         { name: 'Settings & Cloud DB', href: '/settings', icon: Settings },
+        ...(staffUser.role === 'super_admin'
+          ? [{ name: 'Staff Users (RBAC)', href: '/settings?tab=users', icon: ShieldCheck }]
+          : []),
       ],
     },
   ];
@@ -164,13 +165,21 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
                 <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse" />
                 ASR Field Complex
               </span>
-              <span className="text-[9px] text-[#4F46E5] bg-[#EEF2FF] px-1.5 py-0.5 rounded font-mono font-medium">OFFICE</span>
+              <span className="text-[9px] text-[#4F46E5] bg-[#EEF2FF] px-1.5 py-0.5 rounded font-mono font-medium uppercase">
+                {staffUser.role.replace('_', ' ')}
+              </span>
             </div>
             <div className="flex items-center justify-between pt-1 border-t border-[#F2F2EF]">
-              <div>
-                <p className="text-[11px] font-semibold text-[#141414] leading-tight">{staffName}</p>
-                <p className="text-[10px] text-[#8C8C8A]">ASR Staff Representative</p>
-              </div>
+              <Link
+                href="/settings?tab=profile"
+                className="group flex-1 min-w-0 pr-2 hover:opacity-80 transition-opacity"
+                title="Edit My Profile & Password"
+              >
+                <p className="text-[11px] font-semibold text-[#141414] leading-tight truncate group-hover:text-[#4F46E5]">
+                  {staffUser.fullName}
+                </p>
+                <p className="text-[10px] text-[#8C8C8A] truncate">{staffUser.designation}</p>
+              </Link>
               <button
                 onClick={handleSignOut}
                 title="Sign Out of DIMS"
@@ -182,9 +191,12 @@ export const Sidebar: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({
           </div>
 
           <div className="px-2 flex items-center justify-between text-[10px] text-[#8C8C8A]">
-            <span className="flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> RLS Protected
-            </span>
+            <Link
+              href="/settings?tab=profile"
+              className="flex items-center gap-1 hover:text-[#4F46E5] transition-colors"
+            >
+              <ShieldCheck className="w-3 h-3 text-[#16A34A]" /> Profile & Security
+            </Link>
             <span>v2.0 Minimal</span>
           </div>
         </div>

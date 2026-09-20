@@ -41,6 +41,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQuickMenu, setShowQuickMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [staffUser, setStaffUser] = useState(() => store.getCurrentUser());
 
   const searchContainerRef = React.useRef<HTMLDivElement>(null);
   const quickMenuRef = React.useRef<HTMLDivElement>(null);
@@ -67,6 +68,7 @@ export const Topbar: React.FC<TopbarProps> = ({
       setMetrics(store.getDashboardMetrics());
       setSyncStatus(store.getSyncStatus());
       setPendingCount(store.getPendingQueueCount());
+      setStaffUser(store.getCurrentUser());
     });
     return unsub;
   }, []);
@@ -445,6 +447,26 @@ export const Topbar: React.FC<TopbarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Staff Profile Avatar Pill */}
+        <button
+          type="button"
+          onClick={() => router.push('/settings?tab=profile')}
+          title={`Signed in as ${staffUser.fullName} (${staffUser.designation || 'Staff'})`}
+          className="flex items-center gap-2 p-1 pl-2.5 rounded-lg border border-[#E4E4E0] hover:bg-[#F8F8F6] transition-colors cursor-pointer"
+        >
+          <div className="hidden lg:block text-right">
+            <p className="text-[11px] font-semibold text-[#141414] leading-tight truncate max-w-[130px]">
+              {staffUser.fullName}
+            </p>
+            <p className="text-[9px] text-[#8C8C8A] font-mono uppercase leading-none">
+              {staffUser.role.replace('_', ' ')}
+            </p>
+          </div>
+          <div className="w-7 h-7 rounded-full bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center font-bold text-xs border border-[#C7D2FE]">
+            {staffUser.fullName.slice(0, 2).toUpperCase()}
+          </div>
+        </button>
       </div>
     </header>
   );

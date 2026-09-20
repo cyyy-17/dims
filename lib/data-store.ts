@@ -26,11 +26,40 @@ const STORAGE_KEY_PREFIX = 'dims_asr_v2_';
 const INITIAL_STAFF: StaffUser = {
   id: 'usr-asr-lead',
   fullName: 'Maria Joy Clemente',
-  email: 'mjoy.clemente@school.edu.ph',
+  email: 'aseanresidences@firstasia.edu.ph',
   role: 'super_admin',
   designation: 'ASR Head Representative & Dorm Custodian',
+  contactNo: '+63 917 555 0192',
   isActive: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 };
+
+const INITIAL_STAFF_USERS: StaffUser[] = [
+  INITIAL_STAFF,
+  {
+    id: 'usr-dorm-mgr',
+    fullName: 'Carlos Mendoza',
+    email: 'cmendoza@firstasia.edu.ph',
+    role: 'dorm_manager',
+    designation: 'Assistant Dormitory Manager',
+    contactNo: '+63 918 234 5678',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'usr-inv-officer',
+    fullName: 'Elena Santos',
+    email: 'esantos@firstasia.edu.ph',
+    role: 'inventory_officer',
+    designation: 'Property & Inventory Custodian',
+    contactNo: '+63 920 345 6789',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
 
 const INITIAL_SETTINGS: AppSettings = {
   schoolName: 'First Asia Institute of Technology and Humanities',
@@ -865,7 +894,115 @@ class DataStore {
   }
 
   public getCurrentUser(): StaffUser {
-    return this.getItem<StaffUser>('current_user', INITIAL_STAFF);
+    return this.getItem<StaffUser>('current_user', INITIAL_STAFF_USERS[0]);
+  }
+
+  public updateCurrentUser(updates: Partial<StaffUser>): void {
+    const current = this.getCurrentUser();
+    const updated: StaffUser = {
+      ...current,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    this.setItem('current_user', updated);
+
+    // Synchronize within staff_users list
+    const staffList = this.getStaffUsers();
+    const idx = staffList.findIndex(
+      (u) => u.id === current.id || u.email.toLowerCase() === current.email.toLowerCase()
+    );
+    if (idx !== -1) {
+      staffList[idx] = { ...staffList[idx], ...updated };
+      this.setItem('staff_users', staffList);
+    }
+
+    // Keep dormitory lead in settings aligned if updated user is the lead / super admin
+    if (updates.fullName) {
+      const settings = this.getSettings();
+      if (settings.dormitoryLeadName === current.fullName || current.role === 'super_admin') {
+        this.updateSettings({
+          dormitoryLeadName: updates.fullName,
+          dormitoryLeadContact: updates.contactNo || settings.dormitoryLeadContact,
+        });
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      if (updates.fullName) localStorage.setItem('dims_staff_name', updates.fullName);
+      if (updates.email) localStorage.setItem('dims_staff_email', updates.email);
+    }
+
+    this.logActivity('UPDATE_PROFILE', 'auth', `Updated personal profile credentials for ${updated.fullName}.`);
+    this.notify();
+  }
+
+  public getStaffUsers(): StaffUser[] {
+    return this.getItem<StaffUser[]>('staff_users', INITIAL_STAFF_USERS);
+  }
+
+  public addStaffUser(userData: Omit<StaffUser, 'id' | 'createdAt' | 'updatedAt'>): StaffUser {
+    const staffList = this.getStaffUsers();
+    const existing = staffList.find(
+      (u) => u.email.toLowerCase() === userData.email.trim().toLowerCase()
+    );
+    if (existing) {
+      toast.error('Email Conflict', `A staff member with email ${userData.email} already exists.`);
+      return existing;
+    }
+
+    const newId = generateUUID();
+    const newUser: StaffUser = {
+      ...userData,
+      id: newId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    staffList.push(newUser);
+    this.setItem('staff_users', staffList);
+    this.logActivity('CREATE_STAFF_USER', 'settings', `Provisioned new staff account: ${newUser.fullName} (${newUser.role}).`);
+    this.notify();
+    return newUser;
+  }
+
+  public updateStaffUser(id: string, updates: Partial<StaffUser>): void {
+    const staffList = this.getStaffUsers();
+    const idx = staffList.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      staffList[idx] = {
+        ...staffList[idx],
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+      this.setItem('staff_users', staffList);
+
+      // If updating current user, sync current_user too
+      const current = this.getCurrentUser();
+      if (current.id === id) {
+        this.setItem('current_user', staffList[idx]);
+      }
+
+      this.logActivity('UPDATE_STAFF_USER', 'settings', `Updated staff account settings for ${staffList[idx].fullName}.`);
+      this.notify();
+    }
+  }
+
+  public deleteStaffUser(id: string): boolean {
+    const current = this.getCurrentUser();
+    if (current.id === id) {
+      toast.error('Operation Prohibited', 'You cannot delete your own active super admin account.');
+      return false;
+    }
+
+    const staffList = this.getStaffUsers();
+    const target = staffList.find((u) => u.id === id);
+    if (!target) return false;
+
+    const filtered = staffList.filter((u) => u.id !== id);
+    this.setItem('staff_users', filtered);
+    this.logActivity('DELETE_STAFF_USER', 'settings', `Removed staff account: ${target.fullName}.`);
+    this.notify();
+    return true;
   }
 
   // ─────────────────────────────────────────────────────────────

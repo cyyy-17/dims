@@ -226,7 +226,10 @@ export interface StaffUser {
   email: string;
   role: UserRole;
   designation: string;
+  contactNo?: string;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AppSettings {
