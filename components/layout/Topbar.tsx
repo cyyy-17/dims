@@ -456,7 +456,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           className="flex items-center gap-2 p-1 pl-2.5 rounded-lg border border-[#E4E4E0] hover:bg-[#F8F8F6] transition-colors cursor-pointer"
         >
           <div className="hidden lg:block text-right">
-            <p className="text-[11px] font-semibold text-[#141414] leading-tight truncate max-w-[130px]">
+            <p className="text-[11px] font-semibold text-[#141414] leading-tight truncate max-w-32.5">
               {staffUser.fullName}
             </p>
             <p className="text-[9px] text-[#8C8C8A] font-mono uppercase leading-none">
