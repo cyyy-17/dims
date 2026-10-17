@@ -198,7 +198,7 @@ const StockFormContent: React.FC<{
               <option value="">-- General Issuance / Not Room Specific --</option>
               {rooms.map((r) => (
                 <option key={r.id} value={r.id}>
-                  Room {r.roomNumber} ({r.floor})
+                  Room {r.roomNumber} ({r.type.toUpperCase()})
                 </option>
               ))}
             </select>

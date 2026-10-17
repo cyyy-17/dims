@@ -72,8 +72,6 @@ export interface Dormer {
 export interface Room {
   id: string;
   roomNumber: string;
-  floor: string;
-  wing: string;
   type: RoomType;
   capacity: number;
   status: RoomStatus;

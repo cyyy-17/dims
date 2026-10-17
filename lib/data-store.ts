@@ -90,8 +90,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '10000000-0000-0000-0000-000000000101',
     roomNumber: '101',
-    floor: '1st Floor',
-    wing: 'East Wing',
     type: 'double',
     capacity: 2,
     status: 'available',
@@ -105,13 +103,11 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '10000000-0000-0000-0000-000000000102',
     roomNumber: '102',
-    floor: '1st Floor',
-    wing: 'East Wing',
     type: 'double',
     capacity: 2,
     status: 'available',
     monthlyRate: 3500,
-    notes: 'Near ground floor study lounge.',
+    notes: 'Near study lounge and emergency exit.',
     bedSlots: [
       { id: '10000000-0000-0000-0001-000000000102', roomId: '10000000-0000-0000-0000-000000000102', slotLabel: 'Bed A', isOccupied: false },
       { id: '10000000-0000-0000-0002-000000000102', roomId: '10000000-0000-0000-0000-000000000102', slotLabel: 'Bed B', isOccupied: false },
@@ -120,8 +116,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '10000000-0000-0000-0000-000000000103',
     roomNumber: '103',
-    floor: '1st Floor',
-    wing: 'West Wing',
     type: 'single',
     capacity: 1,
     status: 'available',
@@ -134,8 +128,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '10000000-0000-0000-0000-000000000104',
     roomNumber: '104',
-    floor: '1st Floor',
-    wing: 'West Wing',
     type: 'quad',
     capacity: 4,
     status: 'available',
@@ -151,8 +143,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '10000000-0000-0000-0000-000000000105',
     roomNumber: '105',
-    floor: '1st Floor',
-    wing: 'North Wing',
     type: 'double',
     capacity: 2,
     status: 'available',
@@ -166,8 +156,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '20000000-0000-0000-0000-000000000201',
     roomNumber: '201',
-    floor: '2nd Floor',
-    wing: 'East Wing',
     type: 'double',
     capacity: 2,
     status: 'available',
@@ -181,8 +169,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '20000000-0000-0000-0000-000000000202',
     roomNumber: '202',
-    floor: '2nd Floor',
-    wing: 'East Wing',
     type: 'suite',
     capacity: 2,
     status: 'available',
@@ -196,8 +182,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '20000000-0000-0000-0000-000000000203',
     roomNumber: '203',
-    floor: '2nd Floor',
-    wing: 'West Wing',
     type: 'single',
     capacity: 1,
     status: 'available',
@@ -210,13 +194,11 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '20000000-0000-0000-0000-000000000204',
     roomNumber: '204',
-    floor: '2nd Floor',
-    wing: 'West Wing',
     type: 'quad',
     capacity: 4,
     status: 'available',
     monthlyRate: 3000,
-    notes: '2nd floor quad room with air conditioning unit.',
+    notes: 'Quad room with air conditioning unit.',
     bedSlots: [
       { id: '20000000-0000-0000-0001-000000000204', roomId: '20000000-0000-0000-0000-000000000204', slotLabel: 'Lower Bed A', isOccupied: false },
       { id: '20000000-0000-0000-0002-000000000204', roomId: '20000000-0000-0000-0000-000000000204', slotLabel: 'Upper Bed A', isOccupied: false },
@@ -227,8 +209,6 @@ const INITIAL_ROOMS: Room[] = [
   {
     id: '20000000-0000-0000-0000-000000000205',
     roomNumber: '205',
-    floor: '2nd Floor',
-    wing: 'North Wing',
     type: 'double',
     capacity: 2,
     status: 'available',
@@ -285,7 +265,7 @@ const INITIAL_ITEMS: InventoryItem[] = [
     unit: 'units',
     minStock: 2,
     currentStock: 8,
-    location: 'West Wing Storage Bay',
+    location: 'Main Storage Bay',
     qrCodeData: 'DIMS:ITEM:ASR-FURN-003',
     isActive: true,
     createdAt: new Date().toISOString(),
@@ -333,7 +313,7 @@ const INITIAL_ITEMS: InventoryItem[] = [
     unit: 'units',
     minStock: 3,
     currentStock: 7,
-    location: 'Corridor Safety Alcove',
+    location: 'Safety Alcove',
     qrCodeData: 'DIMS:ITEM:ASR-SAFE-001',
     isActive: true,
     createdAt: new Date().toISOString(),
@@ -607,8 +587,6 @@ class DataStore {
       const mappedRooms: Room[] = data.rooms.map((r: any) => ({
         id: r.id,
         roomNumber: r.room_number,
-        floor: r.floor,
-        wing: r.wing || '',
         type: r.type,
         capacity: r.capacity,
         status: r.status,
@@ -1049,7 +1027,23 @@ class DataStore {
   // 4. ROOM & BED SLOT MANAGEMENT
   // ─────────────────────────────────────────────────────────────
   public getRooms(): Room[] {
-    const rooms = this.getItem<Room[]>('rooms', INITIAL_ROOMS);
+    const rawRooms = this.getItem<any[]>('rooms', INITIAL_ROOMS);
+    let hadLegacy = false;
+    const cleanRooms: Room[] = rawRooms.map((room) => {
+      if (room && ('floor' in room || 'wing' in room)) {
+        hadLegacy = true;
+        const clean = { ...room };
+        delete clean.floor;
+        delete clean.wing;
+        return clean as Room;
+      }
+      return room as Room;
+    });
+    if (hadLegacy) {
+      this.setItem('rooms', cleanRooms);
+    }
+
+    const rooms = cleanRooms;
     const dormers = this.getDormers();
     const roomInventory = this.getRoomInventory();
 
@@ -1122,8 +1116,6 @@ class DataStore {
     this.dispatchMutation('INSERT', 'rooms', {
       id: newRoom.id,
       room_number: newRoom.roomNumber,
-      floor: newRoom.floor,
-      wing: newRoom.wing,
       type: newRoom.type,
       capacity: newRoom.capacity,
       status: newRoom.status,
@@ -1204,8 +1196,6 @@ class DataStore {
 
       const dataToUpdate: any = {};
       if (updates.roomNumber !== undefined) dataToUpdate.room_number = updates.roomNumber;
-      if (updates.floor !== undefined) dataToUpdate.floor = updates.floor;
-      if (updates.wing !== undefined) dataToUpdate.wing = updates.wing;
       if (updates.type !== undefined) dataToUpdate.type = updates.type;
       if (updates.capacity !== undefined) dataToUpdate.capacity = updates.capacity;
       if (updates.status !== undefined) dataToUpdate.status = updates.status;

@@ -92,7 +92,7 @@ export const Topbar: React.FC<TopbarProps> = ({
 
     const matchedRooms = store
       .getRooms()
-      .filter((r) => `room ${r.roomNumber} ${r.type} ${r.wing}`.toLowerCase().includes(q))
+      .filter((r) => `room ${r.roomNumber} ${r.type}`.toLowerCase().includes(q))
       .slice(0, 3);
 
     const matchedItems = store

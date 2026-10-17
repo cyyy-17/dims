@@ -94,7 +94,7 @@ const CheckInFormContent: React.FC<{
         <div className="p-3 rounded-lg bg-[#F8F8F6] border border-[#E4E4E0] text-xs space-y-1">
           <p className="font-semibold text-[#141414]">Room {selectedRoom.roomNumber} Overview</p>
           <p className="text-[#555552]">
-            Floor: {selectedRoom.floor} · Wing: {selectedRoom.wing} · Type: {selectedRoom.type}
+            Type: {selectedRoom.type.toUpperCase()} · Capacity: {selectedRoom.capacity} Beds · ₱{selectedRoom.monthlyRate.toLocaleString()}/mo
           </p>
           <p className="text-[#8C8C8A]">{selectedRoom.notes || 'Standard student/staff accommodation.'}</p>
         </div>

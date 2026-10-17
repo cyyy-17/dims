@@ -26,7 +26,6 @@ function RoomsContent() {
 
   const [rooms, setRooms] = useState<Room[]>(store.getRooms());
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterFloor, setFilterFloor] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [roomToEdit, setRoomToEdit] = useState<Room | null>(null);
@@ -55,10 +54,9 @@ function RoomsContent() {
 
   const filteredRooms = rooms.filter((r) => {
     if (filterStatus !== 'all' && r.status !== filterStatus) return false;
-    if (filterFloor !== 'all' && r.floor !== filterFloor) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const match = `room ${r.roomNumber} ${r.type} ${r.wing || ''} ${r.floor || ''} ${r.notes || ''}`
+      const match = `room ${r.roomNumber} ${r.type} ${r.notes || ''}`
         .toLowerCase()
         .includes(q);
       if (!match) return false;
@@ -136,7 +134,7 @@ function RoomsContent() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search room, wing..."
+              placeholder="Search room..."
               className="input-minimal pl-10! py-1.5! text-xs"
             />
           </div>
@@ -153,16 +151,6 @@ function RoomsContent() {
               <option value="partial">Partial Occupancy</option>
               <option value="full">Full Occupancy</option>
               <option value="maintenance">Under Maintenance</option>
-            </select>
-
-            <select
-              value={filterFloor}
-              onChange={(e) => setFilterFloor(e.target.value)}
-              className="input-minimal w-auto py-1.5! text-xs"
-            >
-              <option value="all">All Floors</option>
-              <option value="1st Floor">1st Floor</option>
-              <option value="2nd Floor">2nd Floor</option>
             </select>
           </div>
         </div>
@@ -201,9 +189,6 @@ function RoomsContent() {
                         {room.type}
                       </span>
                     </div>
-                    <p className="text-xs text-[#8C8C8A] mt-0.5">
-                      {room.floor} · {room.wing}
-                    </p>
                   </div>
                   {getStatusBadge(room.status)}
                 </div>

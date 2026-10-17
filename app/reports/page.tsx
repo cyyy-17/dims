@@ -94,7 +94,7 @@ export default function ReportsPage() {
       // Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const roomMatch = `room ${r.roomNumber} ${r.floor} ${r.wing} ${r.type} ${r.status}`.toLowerCase().includes(q);
+        const roomMatch = `room ${r.roomNumber} ${r.type} ${r.status}`.toLowerCase().includes(q);
         const occupantMatch = r.occupants?.some((o) => o.fullName.toLowerCase().includes(q));
         if (!roomMatch && !occupantMatch) return false;
       }
@@ -193,8 +193,6 @@ export default function ReportsPage() {
     if (selectedReport === 'occupancy') {
       const rows = filteredRooms.map((r) => ({
         Room_Number: r.roomNumber,
-        Floor: r.floor,
-        Wing: r.wing,
         Type: r.type,
         Capacity: r.capacity,
         Occupants_Count: r.occupants?.length || 0,
@@ -359,7 +357,7 @@ export default function ReportsPage() {
               <span className="text-[11px] font-semibold text-[#8C8C8A] uppercase tracking-wider">Total Rooms</span>
               <div className="flex items-baseline justify-between mt-1">
                 <span className="text-2xl font-bold text-[#141414]">{filteredRooms.length}</span>
-                <span className="text-xs text-[#555552] font-mono">East & West Wings</span>
+                <span className="text-xs text-[#555552] font-mono">Dormitory Units</span>
               </div>
             </div>
 
@@ -691,7 +689,7 @@ export default function ReportsPage() {
                 {selectedReport === 'visitors' && 'Campus Entry & Visitor Logbook'}
               </h2>
               <p className="text-[11px] text-[#8C8C8A]">
-                {selectedReport === 'occupancy' && 'Physical room capacity, wing assignments, monthly rates, and active occupants.'}
+                {selectedReport === 'occupancy' && 'Physical room capacity, monthly rates, and active occupants.'}
                 {selectedReport === 'dormers' && 'Resident profiles, affiliations, contact info, and room assignments.'}
                 {selectedReport === 'inventory' && 'Warehouse asset catalog, stock balances, storage locations, and alert levels.'}
                 {selectedReport === 'room_assets' && 'Assets and fixtures deployed inside resident rooms with condition status.'}
@@ -718,7 +716,6 @@ export default function ReportsPage() {
                 <thead className="bg-[#FAFAF9] border-b border-[#E4E4E0]">
                   <tr>
                     <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Room</th>
-                    <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Location / Wing</th>
                     <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Room Type</th>
                     <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Monthly Rate</th>
                     <th className="py-2.5 px-3 font-semibold text-[#8C8C8A]">Occupancy Ratio</th>
@@ -735,9 +732,6 @@ export default function ReportsPage() {
                       <tr key={r.id} className="hover:bg-[#F8F8F6] transition-colors">
                         <td className="py-2.5 px-3 font-bold font-mono text-[#141414]">
                           Room {r.roomNumber}
-                        </td>
-                        <td className="py-2.5 px-3 text-[#555552]">
-                          {r.floor}, {r.wing}
                         </td>
                         <td className="py-2.5 px-3">
                           <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-[#F4F4F2] text-[#555552] font-semibold">

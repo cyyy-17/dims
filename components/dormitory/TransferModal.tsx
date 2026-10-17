@@ -68,7 +68,7 @@ const TransferFormContent: React.FC<{
         </div>
         {currentRoom && (
           <p className="text-[#8C8C8A]">
-            {currentRoom.floor} · {currentRoom.wing} · {currentRoom.type.toUpperCase()}
+            {currentRoom.type.toUpperCase()} Room · {currentRoom.capacity} Beds
           </p>
         )}
       </div>

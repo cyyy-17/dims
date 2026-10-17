@@ -23,8 +23,6 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 CREATE TABLE IF NOT EXISTS public.rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_number TEXT NOT NULL UNIQUE,
-  floor TEXT NOT NULL DEFAULT '1st Floor',
-  wing TEXT DEFAULT 'Main Wing',
   type TEXT NOT NULL CHECK (type IN ('single', 'double', 'quad', 'suite')),
   capacity INT NOT NULL DEFAULT 2,
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'partial', 'full', 'maintenance')),

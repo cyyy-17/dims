@@ -9,7 +9,7 @@
 
 - **🏠 Dormitory Management**:
   - Multi-resident classification: **Students**, **Employees**, and **Visitors**.
-  - Dynamic room allocation across floors & wings (Single, Double, Quad, Executive Suite).
+  - Dynamic room allocation (Single, Double, Quad, Executive Suite).
   - Individual bed slot assignments with conflict prevention.
   - Campus visitor registry with host linkage and time-in/time-out logging.
   - Bulk CSV import and instant CSV export across all resident tables.

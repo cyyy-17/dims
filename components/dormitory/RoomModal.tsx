@@ -18,8 +18,6 @@ const RoomFormContent: React.FC<{
   onClose: () => void;
 }> = ({ roomToEdit, onClose }) => {
   const [roomNumber, setRoomNumber] = useState(roomToEdit?.roomNumber || '');
-  const [floor, setFloor] = useState(roomToEdit?.floor || '1st Floor');
-  const [wing, setWing] = useState(roomToEdit?.wing || 'East Wing');
   const [type, setType] = useState<RoomType>(roomToEdit?.type || 'double');
   const [capacity, setCapacity] = useState(roomToEdit?.capacity || 2);
   const [status, setStatus] = useState<RoomStatus>(roomToEdit?.status || 'available');
@@ -71,8 +69,6 @@ const RoomFormContent: React.FC<{
     if (roomToEdit) {
       store.updateRoom(roomToEdit.id, {
         roomNumber,
-        floor,
-        wing,
         type,
         capacity: Number(capacity),
         status,
@@ -83,8 +79,6 @@ const RoomFormContent: React.FC<{
     } else {
       store.addRoom({
         roomNumber,
-        floor,
-        wing,
         type,
         capacity: Number(capacity),
         status,
@@ -125,29 +119,6 @@ const RoomFormContent: React.FC<{
             <option value="quad">Quad (4 Beds)</option>
             <option value="suite">Executive Suite (2 Beds)</option>
           </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-medium text-[#2C2C2A] mb-1">Floor</label>
-          <input
-            type="text"
-            value={floor}
-            onChange={(e) => setFloor(e.target.value)}
-            placeholder="e.g. 1st Floor"
-            className="input-minimal"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-[#2C2C2A] mb-1">Wing / Corridor</label>
-          <input
-            type="text"
-            value={wing}
-            onChange={(e) => setWing(e.target.value)}
-            placeholder="e.g. East Wing"
-            className="input-minimal"
-          />
         </div>
       </div>
 
@@ -229,7 +200,7 @@ export const RoomModal: React.FC<RoomModalProps> = ({ isOpen, onClose, roomToEdi
       isOpen={isOpen}
       onClose={onClose}
       title={roomToEdit ? `Edit Room ${roomToEdit.roomNumber}` : 'Create New Dormitory Room'}
-      description="Define room specifications, floor location, capacity, and rate."
+      description="Define room specifications, capacity, and rate."
       maxWidth="md"
     >
       {isOpen && (

@@ -123,7 +123,7 @@ export default function RoomItemsPage() {
             <option value="all">All Rooms</option>
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
-                Room {r.roomNumber} ({r.floor})
+                Room {r.roomNumber} ({r.type.toUpperCase()})
               </option>
             ))}
           </select>
