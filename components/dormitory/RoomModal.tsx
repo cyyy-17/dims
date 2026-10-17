@@ -18,7 +18,7 @@ const RoomFormContent: React.FC<{
   onClose: () => void;
 }> = ({ roomToEdit, onClose }) => {
   const [roomNumber, setRoomNumber] = useState(roomToEdit?.roomNumber || '');
-  const [type, setType] = useState<RoomType>(roomToEdit?.type || 'double');
+  const [type, setType] = useState<RoomType>(roomToEdit?.type || 'Double');
   const [capacity, setCapacity] = useState(roomToEdit?.capacity || 2);
   const [status, setStatus] = useState<RoomStatus>(roomToEdit?.status || 'available');
   const [monthlyRate, setMonthlyRate] = useState(roomToEdit?.monthlyRate || 3500);
@@ -28,18 +28,19 @@ const RoomFormContent: React.FC<{
     ? (roomToEdit.occupants?.length || store.getBedSlots(roomToEdit.id).filter((b: BedSlot) => b.isOccupied).length || 0)
     : 0;
 
-  const handleTypeChange = (newType: RoomType) => {
-    setType(newType);
-    if (newType === 'single') setCapacity(1);
-    else if (newType === 'double') setCapacity(2);
-    else if (newType === 'quad') setCapacity(4);
-    else if (newType === 'suite') setCapacity(2);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!roomNumber.trim()) {
       toast.error('Required Information', 'Room Number is required.');
+      return;
+    }
+    if (!type.trim()) {
+      toast.error('Required Information', 'Room Type is required.');
+      return;
+    }
+
+    if (Number(capacity) < 1) {
+      toast.warning('Invalid Capacity', 'Room capacity must be at least 1 bed.');
       return;
     }
 
@@ -52,40 +53,28 @@ const RoomFormContent: React.FC<{
       return;
     }
 
-    // Capacity validation per room type
-    if (type === 'single' && Number(capacity) !== 1) {
-      toast.warning('Invalid Capacity', 'Single occupancy rooms must have a capacity of 1.');
-      return;
-    }
-    if (type === 'double' && Number(capacity) !== 2) {
-      toast.warning('Invalid Capacity', 'Double occupancy rooms must have a capacity of 2.');
-      return;
-    }
-    if (type === 'quad' && Number(capacity) !== 4) {
-      toast.warning('Invalid Capacity', 'Quad occupancy rooms must have a capacity of 4.');
-      return;
-    }
+    const trimmedType = type.trim();
 
     if (roomToEdit) {
       store.updateRoom(roomToEdit.id, {
-        roomNumber,
-        type,
+        roomNumber: roomNumber.trim(),
+        type: trimmedType,
         capacity: Number(capacity),
         status,
         monthlyRate: Number(monthlyRate),
-        notes,
+        notes: notes.trim(),
       });
       toast.success('Room Updated', `Room ${roomNumber} parameters saved.`);
     } else {
       store.addRoom({
-        roomNumber,
-        type,
+        roomNumber: roomNumber.trim(),
+        type: trimmedType,
         capacity: Number(capacity),
         status,
         monthlyRate: Number(monthlyRate),
-        notes,
+        notes: notes.trim(),
       });
-      toast.success('Room Created', `Room ${roomNumber} (${type}) was added.`);
+      toast.success('Room Created', `Room ${roomNumber} (${trimmedType}) was added.`);
     }
 
     onClose();
@@ -108,17 +97,17 @@ const RoomFormContent: React.FC<{
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[#2C2C2A] mb-1">Room Type</label>
-          <select
+          <label className="block text-xs font-medium text-[#2C2C2A] mb-1">
+            Room Type <span className="text-[#DC2626]">*</span>
+          </label>
+          <input
+            type="text"
+            required
             value={type}
-            onChange={(e) => handleTypeChange(e.target.value as RoomType)}
+            onChange={(e) => setType(e.target.value)}
+            placeholder="e.g. Single, Double, Quad, Executive Suite"
             className="input-minimal"
-          >
-            <option value="single">Single (1 Bed)</option>
-            <option value="double">Double (2 Beds)</option>
-            <option value="quad">Quad (4 Beds)</option>
-            <option value="suite">Executive Suite (2 Beds)</option>
-          </select>
+          />
         </div>
       </div>
 

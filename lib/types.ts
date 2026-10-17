@@ -4,7 +4,7 @@ export type DormerStatus = 'active' | 'checked_out' | 'on_leave' | 'transferred'
 
 export type RoomStatus = 'available' | 'partial' | 'full' | 'maintenance';
 
-export type RoomType = 'single' | 'double' | 'quad' | 'suite';
+export type RoomType = string;
 
 export type ItemCondition = 'new' | 'good' | 'fair' | 'for_repair' | 'condemned';
 

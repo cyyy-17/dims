@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
 CREATE TABLE IF NOT EXISTS public.rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_number TEXT NOT NULL UNIQUE,
-  type TEXT NOT NULL CHECK (type IN ('single', 'double', 'quad', 'suite')),
+  type TEXT NOT NULL DEFAULT 'Standard',
   capacity INT NOT NULL DEFAULT 2,
   status TEXT NOT NULL DEFAULT 'available' CHECK (status IN ('available', 'partial', 'full', 'maintenance')),
   monthly_rate NUMERIC(10, 2) DEFAULT 0.00,
