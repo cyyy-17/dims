@@ -33,25 +33,32 @@ export async function GET(request: NextRequest) {
     const admin = getSupabaseAdmin();
 
     if (admin) {
-      // Look up user profile in Supabase
-      const { data: profile } = await admin
-        .from('user_profiles')
-        .select('*')
-        .eq('id', email)
-        .single();
+      // Look up user profile in Supabase by resolving auth.users UUID
+      const { data: usersData } = await admin.auth.admin.listUsers();
+      const existingUser = usersData?.users?.find(
+        (u) => u.email?.toLowerCase() === email.toLowerCase() || u.id === email
+      );
 
-      if (profile) {
-        return NextResponse.json({
-          success: true,
-          user: {
-            id: profile.id,
-            fullName: profile.full_name,
-            email: email,
-            role: profile.role,
-            designation: profile.designation,
-            isActive: profile.is_active,
-          },
-        });
+      if (existingUser) {
+        const { data: profile } = await admin
+          .from('user_profiles')
+          .select('*')
+          .eq('id', existingUser.id)
+          .maybeSingle();
+
+        if (profile) {
+          return NextResponse.json({
+            success: true,
+            user: {
+              id: profile.id,
+              fullName: profile.full_name,
+              email: existingUser.email || email,
+              role: profile.role,
+              designation: profile.designation,
+              isActive: profile.is_active,
+            },
+          });
+        }
       }
     }
 

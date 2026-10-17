@@ -69,114 +69,143 @@ export async function POST(request: NextRequest) {
     for (const mutation of mutations) {
       const { action, table, payload } = mutation;
 
-      if (action === 'CHECKOUT_DORMER') {
-        const { dormerId, bedSlotId } = payload;
-        // 1. Deactivate room assignment
-        if (dormerId) {
-          await supabase
-            .from('room_assignments')
-            .update({ is_current: false, check_out_date: new Date().toISOString().split('T')[0] })
-            .eq('dormer_id', dormerId)
-            .eq('is_current', true);
-        }
-        // 2. Free up bed slot
-        if (bedSlotId) {
-          await supabase.from('bed_slots').update({ is_occupied: false }).eq('id', bedSlotId);
-        }
-        // 3. Update dormer status
-        if (dormerId) {
-          await supabase.from('dormers').update({ status: 'checked_out' }).eq('id', dormerId);
-        }
-        results.push({ action, success: true });
-      } else if (action === 'ASSIGN_BED') {
-        const { dormerId, roomId, bedSlotId, checkInDate } = payload;
-        // 1. Free any prior active bed slot of this dormer
-        const { data: priorAsgs } = await supabase
-          .from('room_assignments')
-          .select('bed_slot_id')
-          .eq('dormer_id', dormerId)
-          .eq('is_current', true);
-
-        if (priorAsgs && priorAsgs.length > 0) {
-          for (const p of priorAsgs) {
-            if (p.bed_slot_id) {
-              await supabase.from('bed_slots').update({ is_occupied: false }).eq('id', p.bed_slot_id);
-            }
-          }
-          await supabase
-            .from('room_assignments')
-            .update({ is_current: false, check_out_date: checkInDate })
-            .eq('dormer_id', dormerId)
-            .eq('is_current', true);
-        }
-
-        // 2. Insert new assignment
-        await supabase.from('room_assignments').insert({
-          dormer_id: dormerId,
-          room_id: roomId,
-          bed_slot_id: bedSlotId,
-          check_in_date: checkInDate,
-          is_current: true,
-        });
-
-        // 3. Mark bed slot occupied
-        await supabase.from('bed_slots').update({ is_occupied: true }).eq('id', bedSlotId);
-
-        // 4. Set dormer status active
-        await supabase.from('dormers').update({ status: 'active' }).eq('id', dormerId);
-
-        results.push({ action, success: true });
-      } else if (action === 'TRANSFER_BED') {
-        const { dormerId, oldBedSlotId, newRoomId, newBedSlotId, checkInDate } = payload;
-        // 1. Free old bed
-        if (oldBedSlotId) {
-          await supabase.from('bed_slots').update({ is_occupied: false }).eq('id', oldBedSlotId);
-        }
-        // 2. End previous current assignment
-        await supabase
-          .from('room_assignments')
-          .update({ is_current: false, check_out_date: checkInDate })
-          .eq('dormer_id', dormerId)
-          .eq('is_current', true);
-
-        // 3. Create new assignment
-        await supabase.from('room_assignments').insert({
-          dormer_id: dormerId,
-          room_id: newRoomId,
-          bed_slot_id: newBedSlotId,
-          check_in_date: checkInDate,
-          is_current: true,
-        });
-
-        // 4. Mark new bed occupied
-        await supabase.from('bed_slots').update({ is_occupied: true }).eq('id', newBedSlotId);
-
-        results.push({ action, success: true });
-      } else if (['INSERT', 'UPSERT', 'UPDATE', 'DELETE'].includes(action)) {
-        // Table whitelist check
-        if (!ALLOWED_SYNC_TABLES.has(table)) {
-          results.push({
-            action,
-            table,
-            success: false,
-            error: `Table '${table}' is not permitted for synchronization.`,
+      try {
+        if (action === 'CHECKOUT_DORMER') {
+          const { dormerId, bedSlotId } = payload;
+          // Try atomic RPC function first
+          const { error: rpcError } = await supabase.rpc('checkout_dormer', {
+            p_dormer_id: dormerId,
+            p_bed_slot_id: bedSlotId || null,
+            p_check_out_date: new Date().toISOString().split('T')[0],
           });
-          continue;
-        }
 
-        if (action === 'INSERT') {
-          const { error } = await supabase.from(table).insert(payload);
-          results.push({ action, table, success: !error, error: error?.message });
-        } else if (action === 'UPSERT') {
-          const { error } = await supabase.from(table).upsert(payload);
-          results.push({ action, table, success: !error, error: error?.message });
-        } else if (action === 'UPDATE') {
-          const { error } = await supabase.from(table).update(payload.data).eq('id', payload.id);
-          results.push({ action, table, success: !error, error: error?.message });
-        } else if (action === 'DELETE') {
-          const { error } = await supabase.from(table).delete().eq('id', payload.id);
-          results.push({ action, table, success: !error, error: error?.message });
+          if (!rpcError) {
+            results.push({ action, success: true });
+          } else {
+            // Fallback to sequential updates
+            if (dormerId) {
+              await supabase
+                .from('room_assignments')
+                .update({ is_current: false, check_out_date: new Date().toISOString().split('T')[0] })
+                .eq('dormer_id', dormerId)
+                .eq('is_current', true);
+            }
+            if (bedSlotId) {
+              await supabase.from('bed_slots').update({ is_occupied: false }).eq('id', bedSlotId);
+            }
+            if (dormerId) {
+              await supabase.from('dormers').update({ status: 'checked_out' }).eq('id', dormerId);
+            }
+            results.push({ action, success: true });
+          }
+        } else if (action === 'ASSIGN_BED') {
+          const { dormerId, roomId, bedSlotId, checkInDate } = payload;
+          const { error: rpcError } = await supabase.rpc('check_in_dormer', {
+            p_dormer_id: dormerId,
+            p_room_id: roomId,
+            p_bed_slot_id: bedSlotId,
+            p_check_in_date: checkInDate || new Date().toISOString().split('T')[0],
+          });
+
+          if (!rpcError) {
+            results.push({ action, success: true });
+          } else {
+            // Fallback to sequential updates
+            const { data: priorAsgs } = await supabase
+              .from('room_assignments')
+              .select('bed_slot_id')
+              .eq('dormer_id', dormerId)
+              .eq('is_current', true);
+
+            if (priorAsgs && priorAsgs.length > 0) {
+              for (const p of priorAsgs) {
+                if (p.bed_slot_id) {
+                  await supabase.from('bed_slots').update({ is_occupied: false }).eq('id', p.bed_slot_id);
+                }
+              }
+              await supabase
+                .from('room_assignments')
+                .update({ is_current: false, check_out_date: checkInDate })
+                .eq('dormer_id', dormerId)
+                .eq('is_current', true);
+            }
+
+            await supabase.from('room_assignments').insert({
+              dormer_id: dormerId,
+              room_id: roomId,
+              bed_slot_id: bedSlotId,
+              check_in_date: checkInDate,
+              is_current: true,
+            });
+
+            await supabase.from('bed_slots').update({ is_occupied: true }).eq('id', bedSlotId);
+            await supabase.from('dormers').update({ status: 'active' }).eq('id', dormerId);
+
+            results.push({ action, success: true });
+          }
+        } else if (action === 'TRANSFER_BED') {
+          const { dormerId, oldBedSlotId, newRoomId, newBedSlotId, checkInDate } = payload;
+          const { error: rpcError } = await supabase.rpc('transfer_dormer', {
+            p_dormer_id: dormerId,
+            p_old_bed_slot_id: oldBedSlotId || null,
+            p_new_room_id: newRoomId,
+            p_new_bed_slot_id: newBedSlotId,
+            p_transfer_date: checkInDate || new Date().toISOString().split('T')[0],
+          });
+
+          if (!rpcError) {
+            results.push({ action, success: true });
+          } else {
+            // Fallback
+            if (oldBedSlotId) {
+              await supabase.from('bed_slots').update({ is_occupied: false }).eq('id', oldBedSlotId);
+            }
+            await supabase
+              .from('room_assignments')
+              .update({ is_current: false, check_out_date: checkInDate })
+              .eq('dormer_id', dormerId)
+              .eq('is_current', true);
+
+            await supabase.from('room_assignments').insert({
+              dormer_id: dormerId,
+              room_id: newRoomId,
+              bed_slot_id: newBedSlotId,
+              check_in_date: checkInDate,
+              is_current: true,
+            });
+
+            await supabase.from('bed_slots').update({ is_occupied: true }).eq('id', newBedSlotId);
+            results.push({ action, success: true });
+          }
+        } else if (['INSERT', 'UPSERT', 'UPDATE', 'DELETE'].includes(action)) {
+          // Table whitelist check
+          if (!ALLOWED_SYNC_TABLES.has(table)) {
+            results.push({
+              action,
+              table,
+              success: false,
+              error: `Table '${table}' is not permitted for synchronization.`,
+            });
+            continue;
+          }
+
+          if (action === 'INSERT') {
+            const { error } = await supabase.from(table).insert(payload);
+            results.push({ action, table, success: !error, error: error?.message });
+          } else if (action === 'UPSERT') {
+            const { error } = await supabase.from(table).upsert(payload);
+            results.push({ action, table, success: !error, error: error?.message });
+          } else if (action === 'UPDATE') {
+            const { error } = await supabase.from(table).update(payload.data).eq('id', payload.id);
+            results.push({ action, table, success: !error, error: error?.message });
+          } else if (action === 'DELETE') {
+            const { error } = await supabase.from(table).delete().eq('id', payload.id);
+            results.push({ action, table, success: !error, error: error?.message });
+          }
         }
+      } catch (mutationErr: unknown) {
+        const errorMsg = mutationErr instanceof Error ? mutationErr.message : 'Mutation error';
+        results.push({ action, table, success: false, error: errorMsg });
       }
     }
 

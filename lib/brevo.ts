@@ -44,7 +44,6 @@ export async function sendBrevoAnnouncement({
           recipients,
           senderEmail,
           senderName,
-          apiKey: apiKey || localStorage.getItem('dims_brevo_api_key') || undefined,
         }),
       });
       const data = await res.json();
@@ -109,6 +108,20 @@ export async function sendBrevoAnnouncement({
       </html>
     `;
 
+    const emailPayload: Record<string, unknown> = {
+      sender: { name: defaultSenderName, email: defaultSenderEmail },
+      subject: title,
+      htmlContent,
+    };
+
+    if (recipients.length === 1) {
+      emailPayload.to = [{ email: recipients[0].email, name: recipients[0].name }];
+    } else {
+      emailPayload.messageVersions = recipients.map((r) => ({
+        to: [{ email: r.email, name: r.name }],
+      }));
+    }
+
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -116,12 +129,7 @@ export async function sendBrevoAnnouncement({
         'api-key': activeApiKey,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({
-        sender: { name: defaultSenderName, email: defaultSenderEmail },
-        to: recipients.map((r) => ({ email: r.email, name: r.name })),
-        subject: title,
-        htmlContent,
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!response.ok) {

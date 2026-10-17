@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { Dormer, DormerType } from './types';
+import { generateUUID } from './utils';
 
 export const CSV_TEMPLATES: Record<DormerType, string> = {
   student: `student_id_no,first_name,last_name,email,contact_no,gender,emergency_name,emergency_contact,emergency_relationship,year_level,section,course
@@ -81,7 +82,7 @@ export function parseDormerCsv(
           if (!emergencyContact) errors.push(`Row ${index + 1}: Emergency Phone Number is required`);
 
           const dormerData: Partial<Dormer> = {
-            id: `dormer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            id: generateUUID(),
             type: targetType,
             firstName,
             lastName,

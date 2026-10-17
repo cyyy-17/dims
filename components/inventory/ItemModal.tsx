@@ -51,7 +51,7 @@ const ItemFormContent: React.FC<{
       });
       toast.success('Catalog Item Updated', `${name} details have been saved.`);
     } else {
-      store.addInventoryItem({
+      await store.addInventoryItem({
         itemCode,
         name,
         categoryId,

@@ -4,11 +4,16 @@ export const SESSION_COOKIE_NAME = 'dims_staff_session';
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 function getSessionSecret(): string {
-  return (
-    process.env.DIMS_SESSION_SECRET ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    'dims-asr-default-signing-key-2026-strict'
-  );
+  const secret = process.env.DIMS_SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'CRITICAL SECURITY ERROR: DIMS_SESSION_SECRET or SUPABASE_SERVICE_ROLE_KEY must be configured in production.'
+      );
+    }
+    return 'dims-asr-dev-signing-key-strict-local-only';
+  }
+  return secret;
 }
 
 interface SessionPayload {

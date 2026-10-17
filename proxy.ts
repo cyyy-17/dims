@@ -4,9 +4,26 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Allow public auth endpoint
+  if (pathname === '/api/auth/login') {
+    return NextResponse.next();
+  }
+
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
   const session = verifySessionToken(sessionCookie?.value);
   const hasSession = session.valid;
+
+  // Guard all other API routes with a 401 JSON response
+  if (pathname.startsWith('/api/')) {
+    if (!hasSession) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Valid staff session required.' },
+        { status: 401 }
+      );
+    }
+    return NextResponse.next();
+  }
 
   // If visiting /login and already has active session, redirect to home
   if (pathname === '/login') {
@@ -16,7 +33,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Protect all internal application routes
+  // Protect all internal application pages
   if (!hasSession) {
     const loginUrl = new URL('/login', request.url);
     const response = NextResponse.redirect(loginUrl);
@@ -34,11 +51,10 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
-     * - api routes
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico, images and public assets
      */
-    '/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

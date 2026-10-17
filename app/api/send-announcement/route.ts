@@ -44,9 +44,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 2. Rate limiting check (max 10 sends per minute)
-  const clientIdentifier = request.headers.get('x-forwarded-for') || 'staff-session';
+  // 2. Rate limiting check (max 10 sends per minute per authenticated user)
+  const clientIdentifier = session.email || request.headers.get('x-forwarded-for') || 'staff-session';
   const now = Date.now();
+  
+  // Evict stale entries to prevent memory leaks in long-running processes
+  for (const [key, tList] of rateLimitMap.entries()) {
+    const valid = tList.filter((t) => now - t < 60000);
+    if (valid.length === 0) rateLimitMap.delete(key);
+    else rateLimitMap.set(key, valid);
+  }
+
   const timestamps = rateLimitMap.get(clientIdentifier) || [];
   const recentTimestamps = timestamps.filter((t) => now - t < 60000);
   if (recentTimestamps.length >= 10) {
@@ -135,6 +143,25 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
+    const emailPayload: Record<string, unknown> = {
+      sender: {
+        name: senderName,
+        email: senderEmail,
+      },
+      subject: title,
+      htmlContent,
+    };
+
+    if (recipients.length === 1) {
+      emailPayload.to = [{ email: recipients[0].email, name: recipients[0].name }];
+    } else {
+      // Use Brevo messageVersions so each recipient receives an individual email
+      // without exposing other recipients' personal email addresses
+      emailPayload.messageVersions = recipients.map((r) => ({
+        to: [{ email: r.email, name: r.name }],
+      }));
+    }
+
     const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -142,18 +169,7 @@ export async function POST(request: NextRequest) {
         'api-key': activeApiKey,
         'content-type': 'application/json',
       },
-      body: JSON.stringify({
-        sender: {
-          name: senderName,
-          email: senderEmail,
-        },
-        to: recipients.map((r) => ({
-          email: r.email,
-          name: r.name,
-        })),
-        subject: title,
-        htmlContent,
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!brevoResponse.ok) {

@@ -534,6 +534,21 @@ class DataStore {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
+          if (Array.isArray(data.results)) {
+            const failedQueue: typeof queue = [];
+            data.results.forEach((r: any, idx: number) => {
+              if (!r.success && queue[idx]) {
+                console.warn(
+                  `Sync mutation failed for ${queue[idx].table}.${queue[idx].action}:`,
+                  r.error
+                );
+                failedQueue.push(queue[idx]);
+              }
+            });
+            this.saveSyncQueue(failedQueue);
+            this.setSyncStatus(failedQueue.length > 0 ? 'pending' : 'synced');
+            return;
+          }
           this.saveSyncQueue([]);
           this.setSyncStatus('synced');
           return;
@@ -785,8 +800,15 @@ class DataStore {
     }
   }
 
-  public async syncFromSupabase(): Promise<void> {
+  private lastSyncTimestamp = 0;
+  private readonly SYNC_COOLDOWN_MS = 20000; // 20s throttle to prevent excessive queries on page navigation
+
+  public async syncFromSupabase(force: boolean = false): Promise<void> {
     if (typeof window === 'undefined' || !navigator.onLine || this.isSyncing) return;
+    const now = Date.now();
+    if (!force && now - this.lastSyncTimestamp < this.SYNC_COOLDOWN_MS) {
+      return;
+    }
     this.isSyncing = true;
     this.setSyncStatus('syncing');
 
@@ -810,6 +832,7 @@ class DataStore {
         if (res.ok) {
           const json = await res.json();
           if (json.success && json.data) {
+            this.lastSyncTimestamp = Date.now();
             this.applySyncData(json.data);
             await this.processPendingSyncQueue();
             return;
@@ -1283,6 +1306,8 @@ class DataStore {
     const dormers = this.getDormers();
     let count = 0;
 
+    const batchPayloads: any[] = [];
+
     incomingDormers.forEach((item) => {
       if (item.firstName && item.lastName && item.email) {
         const isDuplicate = dormers.some(
@@ -1320,7 +1345,7 @@ class DataStore {
         dormers.unshift(newDormer);
         count++;
 
-        const p = {
+        batchPayloads.push({
           id: newDormer.id,
           type: newDormer.type,
           first_name: newDormer.firstName,
@@ -1345,10 +1370,13 @@ class DataStore {
           status: newDormer.status,
           created_at: newDormer.createdAt,
           updated_at: newDormer.updatedAt,
-        };
-        this.dispatchMutation('INSERT', 'dormers', p);
+        });
       }
     });
+
+    if (batchPayloads.length > 0) {
+      this.dispatchMutation('UPSERT', 'dormers', batchPayloads);
+    }
 
     this.setItem('dormers', dormers);
     this.logActivity('BULK_IMPORT_DORMERS', 'dormitory', `Imported ${count} ${type} records via CSV upload.`);

@@ -53,8 +53,13 @@ const StockFormContent: React.FC<{
       quantity: Number(quantity),
       referenceNo,
       supplier: type === 'in' ? supplier : undefined,
-      purpose,
-      issuedTo: type === 'out' && dormerId ? dormers.find((d) => d.id === dormerId)?.firstName : undefined,
+      issuedTo:
+        type === 'out' && dormerId
+          ? (() => {
+              const d = dormers.find((dm) => dm.id === dormerId);
+              return d ? `${d.firstName} ${d.lastName}` : undefined;
+            })()
+          : undefined,
       dormerId: type === 'out' ? dormerId : undefined,
       roomId: type === 'out' ? roomId : undefined,
       condition: type === 'return' ? condition : undefined,

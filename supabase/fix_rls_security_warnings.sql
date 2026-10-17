@@ -65,25 +65,25 @@ CREATE POLICY "Authenticated staff mutate bed slots" ON public.bed_slots
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
--- DORMERS
-CREATE POLICY "Public read dormers" ON public.dormers
-  FOR SELECT TO anon, authenticated USING (true);
+-- DORMERS (SENSITIVE: PII restricted to authenticated staff)
+CREATE POLICY "Authenticated staff read dormers" ON public.dormers
+  FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated staff mutate dormers" ON public.dormers
   FOR ALL TO authenticated
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
--- ROOM ASSIGNMENTS
-CREATE POLICY "Public read assignments" ON public.room_assignments
-  FOR SELECT TO anon, authenticated USING (true);
+-- ROOM ASSIGNMENTS (SENSITIVE: Restricted to authenticated staff)
+CREATE POLICY "Authenticated staff read assignments" ON public.room_assignments
+  FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated staff mutate assignments" ON public.room_assignments
   FOR ALL TO authenticated
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
--- VISITOR LOGS
-CREATE POLICY "Public read visitor logs" ON public.visitor_logs
-  FOR SELECT TO anon, authenticated USING (true);
+-- VISITOR LOGS (SENSITIVE: Restricted to authenticated staff)
+CREATE POLICY "Authenticated staff read visitor logs" ON public.visitor_logs
+  FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated staff mutate visitor logs" ON public.visitor_logs
   FOR ALL TO authenticated
   USING (auth.role() = 'authenticated')
@@ -106,8 +106,8 @@ CREATE POLICY "Authenticated staff mutate items" ON public.items
   WITH CHECK (auth.role() = 'authenticated');
 
 -- STOCK TRANSACTIONS
-CREATE POLICY "Public read stock transactions" ON public.stock_transactions
-  FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Authenticated staff read stock transactions" ON public.stock_transactions
+  FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated staff mutate stock transactions" ON public.stock_transactions
   FOR ALL TO authenticated
   USING (auth.role() = 'authenticated')
@@ -129,17 +129,99 @@ CREATE POLICY "Authenticated staff mutate announcements" ON public.announcements
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
--- ANNOUNCEMENT RECIPIENTS
-CREATE POLICY "Public read announcement recipients" ON public.announcement_recipients
-  FOR SELECT TO anon, authenticated USING (true);
+-- ANNOUNCEMENT RECIPIENTS (SENSITIVE: Emails restricted to authenticated staff)
+CREATE POLICY "Authenticated staff read announcement recipients" ON public.announcement_recipients
+  FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated staff mutate announcement recipients" ON public.announcement_recipients
   FOR ALL TO authenticated
   USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
--- ACTIVITY LOGS (Immutable audit trail: anyone can read, only authenticated staff or server can insert; no updates or deletes)
-CREATE POLICY "Public read activity logs" ON public.activity_logs
-  FOR SELECT TO anon, authenticated USING (true);
+-- ACTIVITY LOGS (SENSITIVE: Audit logs restricted to authenticated staff)
+CREATE POLICY "Authenticated staff read activity logs" ON public.activity_logs
+  FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated staff insert activity logs" ON public.activity_logs
   FOR INSERT TO authenticated
   WITH CHECK (auth.role() = 'authenticated');
+
+-- 3. ENSURE NON-NEGATIVE STOCK CONSTRAINT
+ALTER TABLE public.items DROP CONSTRAINT IF EXISTS chk_stock_non_negative;
+ALTER TABLE public.items ADD CONSTRAINT chk_stock_non_negative CHECK (current_stock >= 0);
+
+-- 4. ATOMIC PROCEDURES (TRANSACTIONAL SAFETY)
+CREATE OR REPLACE FUNCTION public.check_in_dormer(
+  p_dormer_id UUID,
+  p_room_id UUID,
+  p_bed_slot_id UUID,
+  p_check_in_date DATE DEFAULT CURRENT_DATE
+) RETURNS JSONB AS $$
+DECLARE
+  v_prior RECORD;
+BEGIN
+  FOR v_prior IN 
+    SELECT bed_slot_id FROM public.room_assignments 
+    WHERE dormer_id = p_dormer_id AND is_current = TRUE 
+  LOOP
+    IF v_prior.bed_slot_id IS NOT NULL THEN
+      UPDATE public.bed_slots SET is_occupied = FALSE WHERE id = v_prior.bed_slot_id;
+    END IF;
+  END LOOP;
+
+  UPDATE public.room_assignments 
+  SET is_current = FALSE, check_out_date = p_check_in_date 
+  WHERE dormer_id = p_dormer_id AND is_current = TRUE;
+
+  INSERT INTO public.room_assignments (dormer_id, room_id, bed_slot_id, check_in_date, is_current)
+  VALUES (p_dormer_id, p_room_id, p_bed_slot_id, p_check_in_date, TRUE);
+
+  UPDATE public.bed_slots SET is_occupied = TRUE WHERE id = p_bed_slot_id;
+  UPDATE public.dormers SET status = 'active', updated_at = NOW() WHERE id = p_dormer_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.checkout_dormer(
+  p_dormer_id UUID,
+  p_bed_slot_id UUID,
+  p_check_out_date DATE DEFAULT CURRENT_DATE
+) RETURNS JSONB AS $$
+BEGIN
+  UPDATE public.room_assignments 
+  SET is_current = FALSE, check_out_date = p_check_out_date 
+  WHERE dormer_id = p_dormer_id AND is_current = TRUE;
+
+  IF p_bed_slot_id IS NOT NULL THEN
+    UPDATE public.bed_slots SET is_occupied = FALSE WHERE id = p_bed_slot_id;
+  END IF;
+
+  UPDATE public.dormers SET status = 'checked_out', updated_at = NOW() WHERE id = p_dormer_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.transfer_dormer(
+  p_dormer_id UUID,
+  p_old_bed_slot_id UUID,
+  p_new_room_id UUID,
+  p_new_bed_slot_id UUID,
+  p_transfer_date DATE DEFAULT CURRENT_DATE
+) RETURNS JSONB AS $$
+BEGIN
+  IF p_old_bed_slot_id IS NOT NULL THEN
+    UPDATE public.bed_slots SET is_occupied = FALSE WHERE id = p_old_bed_slot_id;
+  END IF;
+
+  UPDATE public.room_assignments 
+  SET is_current = FALSE, check_out_date = p_transfer_date 
+  WHERE dormer_id = p_dormer_id AND is_current = TRUE;
+
+  INSERT INTO public.room_assignments (dormer_id, room_id, bed_slot_id, check_in_date, is_current)
+  VALUES (p_dormer_id, p_new_room_id, p_new_bed_slot_id, p_transfer_date, TRUE);
+
+  UPDATE public.bed_slots SET is_occupied = TRUE WHERE id = p_new_bed_slot_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

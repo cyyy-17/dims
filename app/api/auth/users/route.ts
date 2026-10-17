@@ -12,7 +12,7 @@ function getSupabaseAdmin() {
   });
 }
 
-// Helper: Ensure the caller is an authenticated Super Admin
+// Helper: Ensure the caller is an authenticated Super Admin (Fail-Closed)
 async function verifySuperAdmin(request: NextRequest): Promise<{ error?: string; status?: number; session?: { email: string } }> {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
   const session = verifySessionToken(sessionCookie?.value);
@@ -20,34 +20,48 @@ async function verifySuperAdmin(request: NextRequest): Promise<{ error?: string;
     return { error: 'Unauthorized session. Please log in.', status: 401 };
   }
 
-  const callerEmail = session.email;
-  // Verify super_admin role via Supabase or fallback
-  const admin = getSupabaseAdmin();
-  if (admin) {
-    try {
-      const { data: usersData } = await admin.auth.admin.listUsers();
-      const user = usersData?.users?.find(
-        (u) => u.email?.toLowerCase() === callerEmail.toLowerCase() || u.id === callerEmail
-      );
+  const callerEmail = session.email.toLowerCase();
+  const leadStaffEmail = (process.env.DIMS_STAFF_EMAIL || 'aseanresidences@firstasia.edu.ph').toLowerCase();
 
-      if (user) {
-        const { data: profile } = await admin
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        const role = profile?.role || user.user_metadata?.role;
-        if (role && role !== 'super_admin') {
-          return { error: 'Forbidden. Super Admin access required.', status: 403 };
-        }
-      }
-    } catch {
-      // Fallback
-    }
+  // If primary offline staff email, grant super admin
+  if (callerEmail === leadStaffEmail) {
+    return { session: { email: callerEmail } };
   }
 
-  return { session: { email: callerEmail } };
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return { error: 'Forbidden. Super Admin access required.', status: 403 };
+  }
+
+  try {
+    const { data: usersData, error: listError } = await admin.auth.admin.listUsers();
+    if (listError || !usersData?.users) {
+      return { error: 'Authorization verification failed.', status: 403 };
+    }
+
+    const user = usersData.users.find(
+      (u) => u.email?.toLowerCase() === callerEmail || u.id === callerEmail
+    );
+
+    if (!user) {
+      return { error: 'Forbidden. Account not recognized as Super Admin.', status: 403 };
+    }
+
+    const { data: profile } = await admin
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const role = profile?.role || user.user_metadata?.role;
+    if (role !== 'super_admin') {
+      return { error: 'Forbidden. Super Admin access required.', status: 403 };
+    }
+
+    return { session: { email: callerEmail } };
+  } catch {
+    return { error: 'Forbidden. Authorization error.', status: 403 };
+  }
 }
 
 // GET: Retrieve list of all staff accounts
